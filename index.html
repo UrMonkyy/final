@@ -2237,9 +2237,20 @@
             <tr><td colspan="5" class="empty">No verified players yet.</td></tr>
           </tbody>
         </table>
-        <div class="action-row" style="justify-content:space-between; align-items:center; margin-top:12px; gap:12px;">
+        <div class="action-row" style="justify-content:space-between; align-items:center; margin-top:12px; gap:12px; flex-wrap:wrap;">
           <button type="button" class="back-btn" onclick="changePlayerSpreadsheetPage('playerHomeSpreadsheetBody', -1)">← Previous</button>
           <span class="pill" id="playerHomePaginationInfo">Page 1</span>
+          <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+            <input
+              type="number"
+              id="playerHomePageJump"
+              min="1"
+              placeholder="Go to page"
+              style="width:140px;"
+              onkeydown="if(event.key==='Enter'){jumpToPlayerSpreadsheetPage('playerHomeSpreadsheetBody')}"
+            >
+            <button type="button" class="purple-btn" onclick="jumpToPlayerSpreadsheetPage('playerHomeSpreadsheetBody')">Go</button>
+          </div>
           <button type="button" class="secondary-btn" onclick="changePlayerSpreadsheetPage('playerHomeSpreadsheetBody', 1)">Next →</button>
         </div>
       </div>
@@ -3076,9 +3087,20 @@
               <tr><td colspan="5" class="empty">No verified players yet.</td></tr>
             </tbody>
           </table>
-          <div class="action-row" style="justify-content:space-between; align-items:center; margin-top:12px; gap:12px;">
+          <div class="action-row" style="justify-content:space-between; align-items:center; margin-top:12px; gap:12px; flex-wrap:wrap;">
             <button type="button" class="back-btn" onclick="changePlayerSpreadsheetPage('playerSpreadsheetBody', -1)">← Previous</button>
             <span class="pill" id="playerSpreadsheetPaginationInfo">Page 1</span>
+            <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+              <input
+                type="number"
+                id="playerSpreadsheetPageJump"
+                min="1"
+                placeholder="Go to page"
+                style="width:140px;"
+                onkeydown="if(event.key==='Enter'){jumpToPlayerSpreadsheetPage('playerSpreadsheetBody')}"
+              >
+              <button type="button" class="purple-btn" onclick="jumpToPlayerSpreadsheetPage('playerSpreadsheetBody')">Go</button>
+            </div>
             <button type="button" class="secondary-btn" onclick="changePlayerSpreadsheetPage('playerSpreadsheetBody', 1)">Next →</button>
           </div>
         </div>
@@ -10756,6 +10778,53 @@ ${detail}`);
       playerHomeSpreadsheetBody: { page: 1, totalPages: 1, totalRows: 0 },
       playerApplicationsBody: { page: 1, totalPages: 1, totalRows: 0 }
     };
+    const playerSpreadsheetDatasetCache = {
+      rows: null,
+      loadedAt: 0
+    };
+
+    function invalidatePlayerSpreadsheetCache() {
+      playerSpreadsheetDatasetCache.rows = null;
+      playerSpreadsheetDatasetCache.loadedAt = 0;
+    }
+
+    async function fetchAllPlayerSpreadsheetRows() {
+      const cacheAgeMs = 15000;
+      if (
+        Array.isArray(playerSpreadsheetDatasetCache.rows) &&
+        playerSpreadsheetDatasetCache.rows.length >= 0 &&
+        Date.now() - playerSpreadsheetDatasetCache.loadedAt < cacheAgeMs
+      ) {
+        return playerSpreadsheetDatasetCache.rows;
+      }
+
+      const batchSize = 1000;
+      let from = 0;
+      let allRows = [];
+
+      while (true) {
+        const { data, error } = await supabaseClient
+          .from(ROBLOX_VERIFICATIONS_TABLE)
+          .select("id, discord_tag, roblox_username, nation, club, rank")
+          .order("id", { ascending: false })
+          .range(from, from + batchSize - 1);
+
+        if (error) {
+          console.error("Full player spreadsheet scan failed:", error);
+          throw error;
+        }
+
+        const batch = Array.isArray(data) ? data : [];
+        allRows = allRows.concat(batch);
+
+        if (batch.length < batchSize) break;
+        from += batchSize;
+      }
+
+      playerSpreadsheetDatasetCache.rows = allRows;
+      playerSpreadsheetDatasetCache.loadedAt = Date.now();
+      return allRows;
+    }
 
     function getPlayerSpreadsheetState(targetBodyId = "playerSpreadsheetBody") {
       if (!playerSpreadsheetState[targetBodyId]) {
@@ -10770,6 +10839,12 @@ ${detail}`);
       return "playerSpreadsheetPaginationInfo";
     }
 
+    function getPlayerPageJumpInputId(targetBodyId = "playerSpreadsheetBody") {
+      if (targetBodyId === "playerHomeSpreadsheetBody") return "playerHomePageJump";
+      if (targetBodyId === "playerApplicationsBody") return "playerModerationPageJump";
+      return "playerSpreadsheetPageJump";
+    }
+
     function updatePlayerSpreadsheetPagination(targetBodyId, totalRows) {
       const state = getPlayerSpreadsheetState(targetBodyId);
       state.totalRows = Number(totalRows || 0);
@@ -10782,6 +10857,12 @@ ${detail}`);
         info.textContent = state.totalRows
           ? `Page ${state.page} of ${state.totalPages} · ${state.totalRows} players`
           : `Page ${state.page}`;
+      }
+
+      const input = document.getElementById(getPlayerPageJumpInputId(targetBodyId));
+      if (input) {
+        input.max = String(state.totalPages || 1);
+        input.placeholder = `Go to page (1-${state.totalPages || 1})`;
       }
     }
 
@@ -10808,6 +10889,28 @@ ${detail}`);
       }
     }
 
+    function jumpToPlayerSpreadsheetPage(targetBodyId = "playerSpreadsheetBody") {
+      const input = document.getElementById(getPlayerPageJumpInputId(targetBodyId));
+      if (!input) return;
+
+      const requestedPage = Number(input.value || 1);
+      if (!Number.isFinite(requestedPage) || requestedPage < 1) {
+        input.value = "";
+        return;
+      }
+
+      const state = getPlayerSpreadsheetState(targetBodyId);
+      const nextPage = Math.min(Math.max(1, Math.floor(requestedPage)), state.totalPages || 1);
+      if (nextPage === state.page) return;
+
+      state.page = nextPage;
+      if (targetBodyId === "playerApplicationsBody") {
+        renderPlayerModerationTable();
+      } else {
+        renderPlayerSpreadsheet(targetBodyId);
+      }
+    }
+
     function buildPlayerSpreadsheetSearchQuery(searchTerm = "") {
       const term = String(searchTerm || "").trim();
       if (!term) return "";
@@ -10824,39 +10927,50 @@ ${detail}`);
     async function fetchPlayerSpreadsheetPage(targetBodyId = "playerSpreadsheetBody") {
       const state = getPlayerSpreadsheetState(targetBodyId);
       const searchTerm = getPlayerSpreadsheetSearchTerm(targetBodyId);
-      const from = (state.page - 1) * PLAYER_SPREADSHEET_PAGE_SIZE;
-      const to = from + PLAYER_SPREADSHEET_PAGE_SIZE - 1;
 
-      let query = supabaseClient
-        .from(ROBLOX_VERIFICATIONS_TABLE)
-        .select("id, discord_tag, roblox_username, nation, club, rank", { count: "exact" })
-        .order("id", { ascending: false })
-        .range(from, to);
+      const allRows = await fetchAllPlayerSpreadsheetRows();
 
-      const searchQuery = buildPlayerSpreadsheetSearchQuery(searchTerm);
-      if (searchQuery) {
-        query = query.or(searchQuery);
-      }
+      const filteredRows = (allRows || [])
+        .map(normalizePlayerSpreadsheetRow)
+        .filter(row => {
+          if (!searchTerm) return true;
 
-      const { data, error, count } = await query;
-      if (error) {
-        console.error("Player spreadsheet query failed:", error);
-        throw error;
-      }
+          const discordTag = String(row.discord_tag || "").toLowerCase();
+          const robloxUsername = String(row.roblox_username || "").toLowerCase();
+          const nation = String(row.nation || "").toLowerCase();
+          const rank = String(row.rank || "").toLowerCase();
+          const club = String(row.club || "").toLowerCase();
 
-      const rows = Array.isArray(data) ? data : [];
-      state.totalRows = Number(count || 0);
-      state.totalPages = Math.max(1, Math.ceil(state.totalRows / PLAYER_SPREADSHEET_PAGE_SIZE));
-      if (state.page > state.totalPages) {
-        state.page = state.totalPages;
-      }
+          return (
+            discordTag.includes(searchTerm) ||
+            robloxUsername.includes(searchTerm) ||
+            nation.includes(searchTerm) ||
+            rank.includes(searchTerm) ||
+            club.includes(searchTerm)
+          );
+        })
+        .sort((a, b) => {
+          const rankDiff = rankOrderValue(b.rank) - rankOrderValue(a.rank);
+          if (rankDiff !== 0) return rankDiff;
+          return String(a.roblox_username || "").localeCompare(String(b.roblox_username || ""));
+        });
+
+      updatePlayerSpreadsheetPagination(targetBodyId, filteredRows.length);
+
+      const safePage = Math.min(Math.max(1, state.page), state.totalPages || 1);
+      state.page = safePage;
+
+      const from = (safePage - 1) * PLAYER_SPREADSHEET_PAGE_SIZE;
+      const to = from + PLAYER_SPREADSHEET_PAGE_SIZE;
 
       const info = document.getElementById(getPlayerPaginationInfoId(targetBodyId));
       if (info) {
-        info.textContent = `Page ${state.page} of ${state.totalPages} · ${state.totalRows} players`;
+        info.textContent = filteredRows.length
+          ? `Page ${state.page} of ${state.totalPages} · ${filteredRows.length} players`
+          : `Page 1 of 1 · 0 players`;
       }
 
-      return rows;
+      return filteredRows.slice(from, to);
     }
 
     async function renderPlayerSpreadsheet(targetBodyId = "playerSpreadsheetBody") {
@@ -11009,6 +11123,7 @@ async function savePlayerSpreadsheetMeta(playerId) {
         `Updated player spreadsheet metadata for verification row ${playerId}: nation ${nation}, club ${club}, rank ${rank}.`
       );
 
+      invalidatePlayerSpreadsheetCache();
       await renderPlayerSpreadsheet();
       await renderPlayerSpreadsheet("playerHomeSpreadsheetBody");
       await renderPlayerModerationTable();
@@ -11042,6 +11157,7 @@ async function savePlayerSpreadsheetMeta(playerId) {
         "Cleared all verified player spreadsheet rows."
       );
 
+      invalidatePlayerSpreadsheetCache();
       await renderPlayerSpreadsheet();
       await renderPlayerSpreadsheet("playerHomeSpreadsheetBody");
       if (canReviewApplications()) {
