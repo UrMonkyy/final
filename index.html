@@ -2237,20 +2237,9 @@
             <tr><td colspan="5" class="empty">No verified players yet.</td></tr>
           </tbody>
         </table>
-        <div class="action-row" style="justify-content:space-between; align-items:center; margin-top:12px; gap:12px; flex-wrap:wrap;">
+        <div class="action-row" style="justify-content:space-between; align-items:center; margin-top:12px; gap:12px;">
           <button type="button" class="back-btn" onclick="changePlayerSpreadsheetPage('playerHomeSpreadsheetBody', -1)">← Previous</button>
           <span class="pill" id="playerHomePaginationInfo">Page 1</span>
-          <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-            <input
-              type="number"
-              id="playerHomePageJump"
-              min="1"
-              placeholder="Go to page"
-              style="width:140px;"
-              onkeydown="if(event.key==='Enter'){jumpToPlayerSpreadsheetPage('playerHomeSpreadsheetBody')}"
-            >
-            <button type="button" class="purple-btn" onclick="jumpToPlayerSpreadsheetPage('playerHomeSpreadsheetBody')">Go</button>
-          </div>
           <button type="button" class="secondary-btn" onclick="changePlayerSpreadsheetPage('playerHomeSpreadsheetBody', 1)">Next →</button>
         </div>
       </div>
@@ -3087,20 +3076,9 @@
               <tr><td colspan="5" class="empty">No verified players yet.</td></tr>
             </tbody>
           </table>
-          <div class="action-row" style="justify-content:space-between; align-items:center; margin-top:12px; gap:12px; flex-wrap:wrap;">
+          <div class="action-row" style="justify-content:space-between; align-items:center; margin-top:12px; gap:12px;">
             <button type="button" class="back-btn" onclick="changePlayerSpreadsheetPage('playerSpreadsheetBody', -1)">← Previous</button>
             <span class="pill" id="playerSpreadsheetPaginationInfo">Page 1</span>
-            <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-              <input
-                type="number"
-                id="playerSpreadsheetPageJump"
-                min="1"
-                placeholder="Go to page"
-                style="width:140px;"
-                onkeydown="if(event.key==='Enter'){jumpToPlayerSpreadsheetPage('playerSpreadsheetBody')}"
-              >
-              <button type="button" class="purple-btn" onclick="jumpToPlayerSpreadsheetPage('playerSpreadsheetBody')">Go</button>
-            </div>
             <button type="button" class="secondary-btn" onclick="changePlayerSpreadsheetPage('playerSpreadsheetBody', 1)">Next →</button>
           </div>
         </div>
@@ -6616,16 +6594,8 @@ const playerNationFlagFileMap = {
       "unranked"
     ];
 
-    function normalizePlayerRankValue(rank) {
-      const value = String(rank == null ? "unranked" : rank).trim();
-      if (!value) return "unranked";
-      const upper = value.toUpperCase();
-      if (upper === "UNRANKED") return "unranked";
-      return upper;
-    }
-
     function rankOrderValue(rank) {
-      const normalized = normalizePlayerRankValue(rank);
+      const normalized = String(rank || "unranked").trim().toUpperCase();
       const order = {
         "S+": 210, "S": 200, "S-": 190,
         "A+": 180, "A": 170, "A-": 160,
@@ -6633,14 +6603,14 @@ const playerNationFlagFileMap = {
         "C+": 120, "C": 110, "C-": 100,
         "D+": 90, "D": 80, "D-": 70,
         "F+": 60, "F": 50, "F-": 40,
-        "unranked": 0
+        "UNRANKED": 0
       };
       return order[normalized] ?? 0;
     }
 
     function rankTierLabel(rank) {
-      const normalized = normalizePlayerRankValue(rank);
-      if (normalized === "unranked") return "Unranked";
+      const normalized = String(rank || "unranked").trim().toUpperCase();
+      if (normalized === "UNRANKED" || !normalized) return "Unranked";
       return normalized.charAt(0);
     }
 
@@ -10800,12 +10770,6 @@ ${detail}`);
       return "playerSpreadsheetPaginationInfo";
     }
 
-    function getPlayerPageJumpInputId(targetBodyId = "playerSpreadsheetBody") {
-      if (targetBodyId === "playerHomeSpreadsheetBody") return "playerHomePageJump";
-      if (targetBodyId === "playerApplicationsBody") return "playerModerationPageJump";
-      return "playerSpreadsheetPageJump";
-    }
-
     function updatePlayerSpreadsheetPagination(targetBodyId, totalRows) {
       const state = getPlayerSpreadsheetState(targetBodyId);
       state.totalRows = Number(totalRows || 0);
@@ -10818,12 +10782,6 @@ ${detail}`);
         info.textContent = state.totalRows
           ? `Page ${state.page} of ${state.totalPages} · ${state.totalRows} players`
           : `Page ${state.page}`;
-      }
-
-      const input = document.getElementById(getPlayerPageJumpInputId(targetBodyId));
-      if (input) {
-        input.max = String(state.totalPages || 1);
-        input.placeholder = `Go to page (1-${state.totalPages || 1})`;
       }
     }
 
@@ -10843,28 +10801,6 @@ ${detail}`);
       if (nextPage === state.page) return;
       state.page = nextPage;
 
-      if (targetBodyId === "playerApplicationsBody") {
-        renderPlayerModerationTable();
-      } else {
-        renderPlayerSpreadsheet(targetBodyId);
-      }
-    }
-
-    function jumpToPlayerSpreadsheetPage(targetBodyId = "playerSpreadsheetBody") {
-      const input = document.getElementById(getPlayerPageJumpInputId(targetBodyId));
-      if (!input) return;
-
-      const requestedPage = Number(input.value || 1);
-      if (!Number.isFinite(requestedPage) || requestedPage < 1) {
-        input.value = "";
-        return;
-      }
-
-      const state = getPlayerSpreadsheetState(targetBodyId);
-      const nextPage = Math.min(Math.max(1, Math.floor(requestedPage)), state.totalPages || 1);
-      if (nextPage === state.page) return;
-
-      state.page = nextPage;
       if (targetBodyId === "playerApplicationsBody") {
         renderPlayerModerationTable();
       } else {
@@ -11030,7 +10966,7 @@ ${detail}`);
           </td>
           <td>
             <select id="playerRank_${player.id}">
-              ${playerRankOptions.map(rank => `<option value="${rank}" ${normalizePlayerRankValue(player.rank || "unranked") === normalizePlayerRankValue(rank) ? "selected" : ""}>${rank}</option>`).join("")}
+              ${playerRankOptions.map(rank => `<option value="${rank}" ${String(player.rank || "unranked").toLowerCase() === String(rank).toLowerCase() ? "selected" : ""}>${rank}</option>`).join("")}
             </select>
           </td>
           <td>
@@ -11051,7 +10987,7 @@ async function savePlayerSpreadsheetMeta(playerId) {
       const rankInput = document.getElementById(`playerRank_${playerId}`);
       const nation = (nationInput?.value || "").trim() || "TBD";
       const club = (clubInput?.value || "").trim() || "Free Agent";
-      const rank = normalizePlayerRankValue((rankInput?.value || "").trim() || "unranked");
+      const rank = (rankInput?.value || "").trim() || "unranked";
 
       const { error } = await supabaseClient
         .from(ROBLOX_VERIFICATIONS_TABLE)
