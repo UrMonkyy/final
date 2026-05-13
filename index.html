@@ -6616,8 +6616,16 @@ const playerNationFlagFileMap = {
       "unranked"
     ];
 
+    function normalizePlayerRankValue(rank) {
+      const value = String(rank == null ? "unranked" : rank).trim();
+      if (!value) return "unranked";
+      const upper = value.toUpperCase();
+      if (upper === "UNRANKED") return "unranked";
+      return upper;
+    }
+
     function rankOrderValue(rank) {
-      const normalized = String(rank || "unranked").trim().toUpperCase();
+      const normalized = normalizePlayerRankValue(rank);
       const order = {
         "S+": 210, "S": 200, "S-": 190,
         "A+": 180, "A": 170, "A-": 160,
@@ -6625,14 +6633,14 @@ const playerNationFlagFileMap = {
         "C+": 120, "C": 110, "C-": 100,
         "D+": 90, "D": 80, "D-": 70,
         "F+": 60, "F": 50, "F-": 40,
-        "UNRANKED": 0
+        "unranked": 0
       };
       return order[normalized] ?? 0;
     }
 
     function rankTierLabel(rank) {
-      const normalized = String(rank || "unranked").trim().toUpperCase();
-      if (normalized === "UNRANKED" || !normalized) return "Unranked";
+      const normalized = normalizePlayerRankValue(rank);
+      if (normalized === "unranked") return "Unranked";
       return normalized.charAt(0);
     }
 
@@ -11022,7 +11030,7 @@ ${detail}`);
           </td>
           <td>
             <select id="playerRank_${player.id}">
-              ${playerRankOptions.map(rank => `<option value="${rank}" ${String(player.rank || "unranked").toLowerCase() === String(rank).toLowerCase() ? "selected" : ""}>${rank}</option>`).join("")}
+              ${playerRankOptions.map(rank => `<option value="${rank}" ${normalizePlayerRankValue(player.rank || "unranked") === normalizePlayerRankValue(rank) ? "selected" : ""}>${rank}</option>`).join("")}
             </select>
           </td>
           <td>
@@ -11043,7 +11051,7 @@ async function savePlayerSpreadsheetMeta(playerId) {
       const rankInput = document.getElementById(`playerRank_${playerId}`);
       const nation = (nationInput?.value || "").trim() || "TBD";
       const club = (clubInput?.value || "").trim() || "Free Agent";
-      const rank = (rankInput?.value || "").trim() || "unranked";
+      const rank = normalizePlayerRankValue((rankInput?.value || "").trim() || "unranked");
 
       const { error } = await supabaseClient
         .from(ROBLOX_VERIFICATIONS_TABLE)
