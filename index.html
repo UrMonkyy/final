@@ -3116,7 +3116,8 @@
               oninput="debouncePlayerSpreadsheetSearch('playerApplicationsBody')"
             >
           </div>
-          <div class="action-row" style="justify-content:flex-end; margin-top:8px; margin-bottom:8px;">
+          <div class="action-row" style="justify-content:space-between; align-items:center; margin-top:8px; margin-bottom:8px; gap:12px;">
+            <button class="secondary-btn" type="button" onclick="saveAllPlayerSpreadsheetMeta()">Save All Visible Rows</button>
             <label for="playerModerationHideFreeAgents" style="display:inline-flex; align-items:center; gap:10px; font-weight:600; cursor:pointer; margin:0;">
               <input
                 type="checkbox"
@@ -11162,6 +11163,78 @@ async function savePlayerSpreadsheetMeta(playerId) {
       await renderPlayerModerationTable();
     }
 
+    async function saveAllPlayerSpreadsheetMeta() {
+      if (!canReviewApplications()) {
+        alert("Only moderators and owner can edit spreadsheet rows.");
+        return;
+      }
+
+      const rowButtons = Array.from(document.querySelectorAll('#playerApplicationsBody button[onclick^="savePlayerSpreadsheetMeta("]'));
+      if (!rowButtons.length) {
+        alert("No visible rows to save.");
+        return;
+      }
+
+      const updates = [];
+      for (const button of rowButtons) {
+        const match = (button.getAttribute("onclick") || "").match(/savePlayerSpreadsheetMeta\('([^']+)'\)/);
+        if (!match) continue;
+
+        const playerId = match[1];
+        const nationInput = document.getElementById(`playerNation_${playerId}`);
+        const clubInput = document.getElementById(`playerClub_${playerId}`);
+        const rankInput = document.getElementById(`playerRank_${playerId}`);
+
+        updates.push({
+          id: playerId,
+          nation: (nationInput?.value || "").trim() || "TBD",
+          club: (clubInput?.value || "").trim() || "Free Agent",
+          rank: (rankInput?.value || "").trim() || "unranked",
+          updated_at: new Date().toISOString()
+        });
+      }
+
+      if (!updates.length) {
+        alert("No visible rows to save.");
+        return;
+      }
+
+      const failed = [];
+      for (const row of updates) {
+        const { error } = await supabaseClient
+          .from(ROBLOX_VERIFICATIONS_TABLE)
+          .update({
+            nation: row.nation,
+            club: row.club,
+            rank: row.rank,
+            updated_at: row.updated_at
+          })
+          .eq("id", row.id);
+
+        if (error) {
+          failed.push(`${row.id}: ${error.message}`);
+          continue;
+        }
+
+        await logAction(
+          "update_player_spreadsheet_meta",
+          `Updated player spreadsheet metadata for verification row ${row.id}: nation ${row.nation}, club ${row.club}, rank ${row.rank}.`
+        );
+      }
+
+      invalidatePlayerSpreadsheetCache();
+      await renderPlayerSpreadsheet();
+      await renderPlayerSpreadsheet("playerHomeSpreadsheetBody");
+      await renderPlayerModerationTable();
+
+      if (failed.length) {
+        alert(`Saved visible rows with ${failed.length} error(s). Check console for details.`);
+        console.error("Save all player spreadsheet errors:", failed);
+      } else {
+        alert(`Saved ${updates.length} visible row(s).`);
+      }
+    }
+
     async function clearAllPlayerSpreadsheetData() {
       if (!isOwner()) {
         alert("Only the owner can clear all player spreadsheet data.");
@@ -11469,6 +11542,48 @@ async function applyForfeitResult() {
   document.getElementById("forfeitReason").value = "";
   renderStandingsCompetitionPage();
 }
+
+    async function exportPlayerHubData() {
+      try {
+        let rows = [];
+        if (typeof fetchAllPlayerSpreadsheetRows === "function") {
+          rows = await fetchAllPlayerSpreadsheetRows();
+        } else {
+          const { data, error } = await supabaseClient
+            .from(ROBLOX_VERIFICATIONS_TABLE)
+            .select("id, discord_tag, roblox_username, nation, club, rank")
+            .order("id", { ascending: false });
+
+          if (error) throw error;
+          rows = Array.isArray(data) ? data : [];
+        }
+
+        const normalizedRows = (rows || []).map(normalizePlayerSpreadsheetRow);
+        const header = ["id", "discord_tag", "roblox_username", "nation", "club", "rank"];
+        const csvLines = [header.join(",")].concat(
+          normalizedRows.map(row =>
+            header.map(key => {
+              const value = String(row[key] ?? "");
+              return `"${value.replace(/"/g, '""')}"`;
+            }).join(",")
+          )
+        );
+
+        const blob = new Blob([csvLines.join("\n")], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
+        link.href = url;
+        link.download = `player-hub-export-${stamp}.csv`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+      } catch (error) {
+        console.error("Could not export player hub data:", error);
+        alert("Could not export player hub data.");
+      }
+    }
 
     async function initApp() {
       applySavedTheme();
