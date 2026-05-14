@@ -6345,9 +6345,14 @@ function formatDateTimeLocalValue(value) {
         return '<span class="team-name">Free Agent</span>';
       }
 
-      const spreadsheetClubName = normalizeTeamLogoKey(normalized) === "gladbach"
-        ? "Borussia Mönchengladbach"
-        : normalized;
+      let spreadsheetClubName = normalized;
+      const normalizedKey = normalizeTeamLogoKey(normalized);
+
+      if (normalizedKey === "gladbach") {
+        spreadsheetClubName = "Borussia Mönchengladbach";
+      } else if (normalizedKey === "brighton") {
+        spreadsheetClubName = "Brighton & Hove Albion";
+      }
 
       if (typeof renderTeamWithLogo === "function") {
         return renderTeamWithLogo(spreadsheetClubName);
