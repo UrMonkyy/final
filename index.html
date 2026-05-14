@@ -3116,6 +3116,17 @@
               oninput="debouncePlayerSpreadsheetSearch('playerApplicationsBody')"
             >
           </div>
+          <div class="action-row" style="justify-content:flex-end; margin-top:8px; margin-bottom:8px;">
+            <label for="playerModerationHideFreeAgents" style="display:inline-flex; align-items:center; gap:10px; font-weight:600; cursor:pointer; margin:0;">
+              <input
+                type="checkbox"
+                id="playerModerationHideFreeAgents"
+                onchange="resetPlayerSpreadsheetPage('playerApplicationsBody')"
+                style="width:auto; margin:0;"
+              >
+              Hide Free Agents
+            </label>
+          </div>
           <table>
             <thead>
               <tr>
@@ -6291,6 +6302,11 @@ function formatDateTimeLocalValue(value) {
 
       const el = document.getElementById(inputId);
       return el ? el.value.trim().toLowerCase() : "";
+    }
+
+    function shouldHideFreeAgentsInModeration() {
+      const toggle = document.getElementById("playerModerationHideFreeAgents");
+      return Boolean(toggle && toggle.checked);
     }
 
 
@@ -10937,6 +10953,14 @@ ${detail}`);
       const filteredRows = (allRows || [])
         .map(normalizePlayerSpreadsheetRow)
         .filter(row => {
+          if (
+            targetBodyId === "playerApplicationsBody" &&
+            shouldHideFreeAgentsInModeration() &&
+            String(row.club || "").trim().toLowerCase() === "free agent"
+          ) {
+            return false;
+          }
+
           if (!searchTerm) return true;
 
           const discordTag = String(row.discord_tag || "").toLowerCase();
