@@ -928,6 +928,88 @@
       margin-top: 20px;
     }
 
+    .team-hub-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      margin-top: 20px;
+    }
+
+    .team-hub-card {
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      background: var(--panel-soft);
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .team-hub-card h3 {
+      margin: 0;
+      text-align: left;
+      font-size: 18px;
+    }
+
+    .team-meta-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .team-profile-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 18px;
+      margin-top: 20px;
+    }
+
+    .team-profile-stat {
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: var(--panel-soft);
+      padding: 16px;
+    }
+
+    .team-profile-stat h3 {
+      margin: 0 0 10px;
+      text-align: left;
+    }
+
+    .team-profile-hero {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+
+    .team-profile-hero .team-logo {
+      width: 42px;
+      height: 42px;
+    }
+
+    .team-profile-stat--squad {
+      grid-column: 1 / -1;
+    }
+
+    .table-scroll-wrap {
+      width: 100%;
+      overflow-x: auto;
+      overflow-y: visible;
+      -webkit-overflow-scrolling: touch;
+      border-radius: 14px;
+    }
+
+    .team-profile-stat--squad table {
+      min-width: 720px;
+    }
+
+    .team-profile-stat .archive-item {
+      min-height: 72px;
+    }
+
     .nowrap-link {
       white-space: nowrap;
     }
@@ -1092,6 +1174,21 @@
       .action-row,
       .top-right { flex-direction: column; }
 
+      .topbar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+      }
+
+      .topbar > div {
+        width: 100%;
+      }
+
+      .pill {
+        max-width: 100%;
+        justify-content: center;
+      }
+
       .theme-toggle {
         right: 12px;
         bottom: 12px;
@@ -1111,6 +1208,23 @@
       .competition-brand-copy h2,
       .competition-brand-copy p {
         text-align: center;
+      }
+
+      .team-profile-grid,
+      .team-hub-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .team-profile-stat {
+        padding: 14px;
+      }
+
+      .team-profile-stat--squad table {
+        min-width: 640px;
+      }
+
+      .team-profile-hero {
+        justify-content: flex-start;
       }
     }
 
@@ -2078,6 +2192,12 @@
               <button type="button" onclick="openPlayerHub()">Open Player Hub</button>
             </div>
             <div class="bw-action-tile">
+              <div class="bw-action-icon">◯</div>
+              <h3>Team Hub</h3>
+              <p>Browse all clubs, open team profile pages, and review squad and team-level information.</p>
+              <button type="button" onclick="openTeamHubPage()">Open Team Hub</button>
+            </div>
+            <div class="bw-action-tile">
               <div class="bw-action-icon">◫</div>
               <h3>League Statistics</h3>
               <p>Open your league-wide statistics page with the existing data and calculations.</p>
@@ -2366,7 +2486,11 @@
 <section id="standingsCompetitionPage" class="page">
   <div class="container">
     <div class="topbar">
-      <button class="back-btn" onclick="openStandingsHome()">← Back</button>
+      <div class="action-row" style="margin-bottom:0;">
+        <button class="back-btn" onclick="openStandingsHome()">← Back</button>
+        <button class="secondary-btn" onclick="exportCurrentStandingsData()">Export Standings CSV</button>
+        <button class="purple-btn" onclick="exportCurrentResultsData()">Export Results CSV</button>
+      </div>
       <div>
         <span class="pill" id="standingsCompUserPill">User: Guest</span>
         <span class="pill" id="standingsCompRolePill">Role: Viewer</span>
@@ -2719,6 +2843,83 @@
     </div>
   </section>
 
+
+  <section id="teamHubPage" class="page">
+    <div class="container">
+      <div class="topbar">
+        <button class="back-btn" onclick="openFrontPage()">← Back</button>
+        <div>
+          <span class="pill" id="teamHubUserPill">User: Guest</span>
+          <span class="pill" id="teamHubRolePill">Role: Viewer</span>
+        </div>
+      </div>
+
+      <h1>Team Hub</h1>
+      <p class="subtle">Open team profile pages, review squad sizes, and browse clubs from all competitions.</p>
+
+      <div class="search-bar">
+        <input type="text" id="teamHubSearch" placeholder="Search team" oninput="renderTeamHubCards()">
+      </div>
+
+      <div id="teamHubGrid" class="team-hub-grid">
+        <div class="empty">Loading team hub...</div>
+      </div>
+    </div>
+  </section>
+
+  <section id="teamProfilePage" class="page">
+    <div class="container">
+      <div class="topbar">
+        <button class="back-btn" onclick="openTeamHubPage()">← Back to Team Hub</button>
+        <div>
+          <span class="pill" id="teamProfileUserPill">User: Guest</span>
+          <span class="pill" id="teamProfileRolePill">Role: Viewer</span>
+        </div>
+      </div>
+
+      <div class="team-profile-hero">
+        <div id="teamProfileTitleWrap"></div>
+      </div>
+      <p class="subtle" id="teamProfileSubtitle">Loading team profile...</p>
+
+      <div class="team-profile-grid">
+        <div class="team-profile-stat team-profile-stat--squad">
+          <h3>Squad</h3>
+          <div class="table-scroll-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Rank</th>
+                  <th>Nation</th>
+                  <th>Discord Username</th>
+                  <th>Roblox Username</th>
+                </tr>
+              </thead>
+              <tbody id="teamProfileSquadBody">
+                <tr><td colspan="4" class="empty">No players found.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="team-profile-stat">
+          <h3>Club Totals</h3>
+          <div id="teamProfileTotalsBox" class="archive-list"></div>
+        </div>
+
+        <div class="team-profile-stat">
+          <h3>Standings Presence</h3>
+          <div id="teamProfileStandingsBox" class="archive-list"></div>
+        </div>
+
+        <div class="team-profile-stat">
+          <h3>Top Contributors</h3>
+          <div id="teamProfileContributorsBox" class="archive-list"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <section id="adminPage" class="page">
     <div class="container">
       <div class="topbar">
@@ -2824,7 +3025,10 @@
   <section id="competitionPage" class="page">
     <div class="container">
       <div class="topbar">
-        <button class="back-btn" onclick="openStatsHome()">← Back to Stats</button>
+        <div class="action-row" style="margin-bottom:0;">
+          <button class="back-btn" onclick="openStatsHome()">← Back to Stats</button>
+          <button class="secondary-btn" onclick="exportCurrentCompetitionStats()">Export Stats CSV</button>
+        </div>
         <div>
           <span class="pill" id="compUserPill">User: Guest</span>
           <span class="pill" id="compRolePill">Role: Viewer</span>
@@ -3102,6 +3306,9 @@
               <button type="button" class="purple-btn" onclick="jumpToPlayerSpreadsheetPage('playerSpreadsheetBody')">Go</button>
             </div>
             <button type="button" class="secondary-btn" onclick="changePlayerSpreadsheetPage('playerSpreadsheetBody', 1)">Next →</button>
+          </div>
+          <div class="action-row" style="justify-content:center; margin-top:10px;">
+            <button type="button" class="secondary-btn" onclick="exportPlayerHubData()">Download Spreadsheet Data</button>
           </div>
         </div>
 
@@ -11581,7 +11788,345 @@ async function applyForfeitResult() {
         URL.revokeObjectURL(url);
       } catch (error) {
         console.error("Could not export player hub data:", error);
-        alert("Could not export player hub data.");
+        alert("Could not export spreadsheet data.");
+      }
+    }
+
+    function downloadCsvFile(filename, rows) {
+      const csvLines = (rows || []).map(row =>
+        row.map(value => `"${String(value ?? "").replace(/"/g, '""')}"`).join(",")
+      );
+      const blob = new Blob([csvLines.join("\n")], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    function exportCurrentCompetitionStats() {
+      if (!currentCompetition) {
+        alert("Open a competition stats page first.");
+        return;
+      }
+
+      supabaseClient
+        .from(STATS_TABLE)
+        .select("*")
+        .ilike("competition", canonicalizeCompetitionName(currentCompetition))
+        .then(({ data, error }) => {
+          if (error) {
+            console.error("Could not export competition stats:", error);
+            alert("Could not export competition stats.");
+            return;
+          }
+
+          const rows = Array.isArray(data) ? data : [];
+          const header = ["competition", "player", "club", "matchday", "goals", "assists"];
+          const csvRows = [header];
+
+          rows.forEach(row => {
+            csvRows.push([
+              canonicalizeCompetitionName(row.competition || currentCompetition),
+              row.player || "",
+              row.club || "",
+              row.matchday || "",
+              Number(row.goals || 0),
+              Number(row.assist || row.assists || 0)
+            ]);
+          });
+
+          const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
+          downloadCsvFile(`${slugifyRoutePart(currentCompetition)}-stats-${stamp}.csv`, csvRows);
+        });
+    }
+
+    function exportCurrentStandingsData() {
+      if (!currentStandingsCompetition) {
+        alert("Open a standings page first.");
+        return;
+      }
+
+      const standings = buildStandingsTable(currentStandingsCompetition);
+      const csvRows = [[
+        "position", "team", "mp", "w", "d", "l", "gf", "ga", "gd", "pts"
+      ]];
+
+      standings.forEach((row, index) => {
+        csvRows.push([
+          index + 1,
+          row.team || "",
+          row.mp || 0,
+          row.w || 0,
+          row.d || 0,
+          row.l || 0,
+          row.gf || 0,
+          row.ga || 0,
+          row.gd || 0,
+          row.pts || 0
+        ]);
+      });
+
+      const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
+      downloadCsvFile(`${slugifyRoutePart(currentStandingsCompetition)}-standings-${stamp}.csv`, csvRows);
+    }
+
+    function exportCurrentResultsData() {
+      if (!currentStandingsCompetition) {
+        alert("Open a standings page first.");
+        return;
+      }
+
+      const state = getCompetitionStandingsState(currentStandingsCompetition);
+      const results = Array.isArray(state.results) ? state.results : [];
+      const csvRows = [[
+        "competition", "home_team", "away_team", "home_goals", "away_goals", "forfeit", "note"
+      ]];
+
+      results.forEach(row => {
+        csvRows.push([
+          currentStandingsCompetition,
+          row.homeTeam || "",
+          row.awayTeam || "",
+          row.homeGoals ?? "",
+          row.awayGoals ?? "",
+          row.forfeit ? "yes" : "no",
+          row.forfeitNote || ""
+        ]);
+      });
+
+      const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
+      downloadCsvFile(`${slugifyRoutePart(currentStandingsCompetition)}-results-${stamp}.csv`, csvRows);
+    }
+
+
+    function getAllKnownTeamsForHub() {
+      const baseTeams = new Set();
+      Object.values(domesticClubs || {}).forEach(list => {
+        (list || []).forEach(team => {
+          const clean = String(team || "").trim();
+          if (clean) baseTeams.add(clean);
+        });
+      });
+      return [...baseTeams].sort((a, b) => a.localeCompare(b));
+    }
+
+    function getTeamHubSearchTerm() {
+      const el = document.getElementById("teamHubSearch");
+      return el ? el.value.trim().toLowerCase() : "";
+    }
+
+    function normalizeTeamHubClubName(name) {
+      const normalized = String(name || "").trim();
+      const key = typeof normalizeTeamLogoKey === "function" ? normalizeTeamLogoKey(normalized) : normalized.toLowerCase();
+      if (key === "gladbach") return "Borussia Mönchengladbach";
+      if (key === "brighton") return "Brighton & Hove Albion";
+      return normalized;
+    }
+
+    async function buildTeamHubDataset() {
+      const players = typeof fetchAllPlayerSpreadsheetRows === "function"
+        ? await fetchAllPlayerSpreadsheetRows()
+        : [];
+      const normalizedPlayers = (players || []).map(normalizePlayerSpreadsheetRow);
+
+      const teamMap = {};
+      getAllKnownTeamsForHub().forEach(team => {
+        teamMap[team] = {
+          name: team,
+          players: [],
+          rankedPlayers: 0
+        };
+      });
+
+      normalizedPlayers.forEach(player => {
+        const club = normalizeTeamHubClubName(player.club || "");
+        if (!club || club.toLowerCase() === "free agent") return;
+        if (!teamMap[club]) {
+          teamMap[club] = { name: club, players: [], rankedPlayers: 0 };
+        }
+        teamMap[club].players.push(player);
+        if (String(player.rank || "").toLowerCase() !== "unranked") {
+          teamMap[club].rankedPlayers += 1;
+        }
+      });
+
+      return Object.values(teamMap).sort((a, b) => a.name.localeCompare(b.name));
+    }
+
+    async function renderTeamHubCards() {
+      const grid = document.getElementById("teamHubGrid");
+      if (!grid) return;
+
+      grid.innerHTML = `<div class="empty">Loading team hub...</div>`;
+
+      try {
+        const teams = await buildTeamHubDataset();
+        const searchTerm = getTeamHubSearchTerm();
+        const filtered = teams.filter(team => !searchTerm || team.name.toLowerCase().includes(searchTerm));
+
+        if (!filtered.length) {
+          grid.innerHTML = `<div class="empty">No teams found.</div>`;
+          return;
+        }
+
+        grid.innerHTML = filtered.map(team => `
+          <div class="team-hub-card">
+            <div>${renderTeamWithLogo(team.name)}</div>
+            <h3>${escapeHtml(team.name)}</h3>
+            <div class="team-meta-row">
+              <span class="pill">Squad: ${team.players.length}</span>
+              <span class="pill">Ranked: ${team.rankedPlayers}</span>
+            </div>
+            <button type="button" class="purple-btn" onclick="openTeamProfilePage(${JSON.stringify(team.name).replace(/"/g, '&quot;')})">Open Team Profile</button>
+          </div>
+        `).join("");
+      } catch (error) {
+        console.error("Could not render team hub:", error);
+        grid.innerHTML = `<div class="empty">Could not load team hub.</div>`;
+      }
+    }
+
+    async function openTeamHubPage() {
+      unsubscribeAllRealtimeChannels();
+      refreshUserBars();
+      document.getElementById("teamHubUserPill").textContent = `User: ${currentUser ? currentUser.username : "Guest"}`;
+      document.getElementById("teamHubRolePill").textContent = `Role: ${currentUser ? currentUser.role : "Viewer"}`;
+      await renderTeamHubCards();
+      showPage("teamHubPage");
+    }
+
+    async function openTeamProfilePage(teamName) {
+      const canonicalTeam = normalizeTeamHubClubName(teamName);
+      unsubscribeAllRealtimeChannels();
+      refreshUserBars();
+
+      document.getElementById("teamProfileUserPill").textContent = `User: ${currentUser ? currentUser.username : "Guest"}`;
+      document.getElementById("teamProfileRolePill").textContent = `Role: ${currentUser ? currentUser.role : "Viewer"}`;
+      document.getElementById("teamProfileTitleWrap").innerHTML = `<h1 style="margin:0;">${renderTeamWithLogo(canonicalTeam)}</h1>`;
+      document.getElementById("teamProfileSubtitle").textContent = `${canonicalTeam} profile page`;
+
+      const squadBody = document.getElementById("teamProfileSquadBody");
+      const totalsBox = document.getElementById("teamProfileTotalsBox");
+      const standingsBox = document.getElementById("teamProfileStandingsBox");
+      const contributorsBox = document.getElementById("teamProfileContributorsBox");
+
+      squadBody.innerHTML = `<tr><td colspan="4" class="empty">Loading squad...</td></tr>`;
+      totalsBox.innerHTML = `<div class="archive-item"><div class="archive-item-title">Loading...</div></div>`;
+      standingsBox.innerHTML = `<div class="archive-item"><div class="archive-item-title">Loading...</div></div>`;
+      contributorsBox.innerHTML = `<div class="archive-item"><div class="archive-item-title">Loading...</div></div>`;
+
+      try {
+        const [allPlayers, statsResponse, standingsResponse] = await Promise.all([
+          typeof fetchAllPlayerSpreadsheetRows === "function" ? fetchAllPlayerSpreadsheetRows() : Promise.resolve([]),
+          supabaseClient.from(STATS_TABLE).select("*"),
+          supabaseClient.from(STANDINGS_TABLE).select("*")
+        ]);
+
+        const squad = (allPlayers || [])
+          .map(normalizePlayerSpreadsheetRow)
+          .filter(player => normalizeTeamHubClubName(player.club || "") === canonicalTeam)
+          .sort((a, b) => rankOrderValue(b.rank) - rankOrderValue(a.rank) || String(a.roblox_username || "").localeCompare(String(b.roblox_username || "")));
+
+        if (!squad.length) {
+          squadBody.innerHTML = `<tr><td colspan="4" class="empty">No players assigned to this club yet.</td></tr>`;
+        } else {
+          squadBody.innerHTML = squad.map(player => `
+            <tr>
+              <td>${escapeHtml(player.rank || "unranked")}</td>
+              <td>${renderNationWithFlag(player.nation)}</td>
+              <td>${escapeHtml(player.discord_tag || "-")}</td>
+              <td>${escapeHtml(player.roblox_username || "-")}</td>
+            </tr>
+          `).join("");
+        }
+
+        const statsRows = Array.isArray(statsResponse.data) ? statsResponse.data : [];
+        const clubStats = statsRows.filter(row => normalizeTeamHubClubName(row.club || "") === canonicalTeam);
+
+        const totalGoals = clubStats.reduce((sum, row) => sum + Number(row.goals || 0), 0);
+        const totalAssists = clubStats.reduce((sum, row) => sum + Number(row.assist || row.assists || 0), 0);
+        const totalEntries = clubStats.length;
+
+        totalsBox.innerHTML = `
+          <div class="archive-item"><div class="archive-item-title">Squad Size</div><div class="archive-item-meta">${squad.length} players</div></div>
+          <div class="archive-item"><div class="archive-item-title">Stats Entries</div><div class="archive-item-meta">${totalEntries}</div></div>
+          <div class="archive-item"><div class="archive-item-title">Total Goals</div><div class="archive-item-meta">${totalGoals}</div></div>
+          <div class="archive-item"><div class="archive-item-title">Total Assists</div><div class="archive-item-meta">${totalAssists}</div></div>
+        `;
+
+        const standingsRows = Array.isArray(standingsResponse.data) ? standingsResponse.data : [];
+        const standingsHits = [];
+
+        standingsRows.forEach(row => {
+          const competition = canonicalizeCompetitionName(row.competition || "");
+          if (!competition) return;
+          const normalizedState = normalizeStandingsState({
+            results: row.results,
+            fixtures: row.fixtures,
+            fixtureTimestamps: row.fixture_timestamps,
+            selectedMatchday: row.selected_matchday,
+            knockout: row.knockout,
+            viewerVisible: row.viewer_visible,
+            participantTeams: row.participant_teams
+          });
+          standingsDbCache[competition] = normalizedState;
+          const table = buildStandingsTable(competition);
+          const idx = table.findIndex(teamRow => normalizeTeamHubClubName(teamRow.team || "") === canonicalTeam);
+          if (idx >= 0) {
+            const found = table[idx];
+            standingsHits.push({
+              competition,
+              position: idx + 1,
+              pts: found.pts || 0,
+              record: `${found.w || 0}-${found.d || 0}-${found.l || 0}`
+            });
+          }
+        });
+
+        standingsBox.innerHTML = standingsHits.length
+          ? standingsHits.map(item => `
+              <div class="archive-item">
+                <div class="archive-item-title">${escapeHtml(getCompetitionDisplayName(item.competition))}</div>
+                <div class="archive-item-meta">Position ${item.position} · ${item.pts} pts · ${item.record}</div>
+              </div>
+            `).join("")
+          : `<div class="archive-item"><div class="archive-item-title">No standings data</div><div class="archive-item-meta">This club is not currently placed in a tracked standings table.</div></div>`;
+
+        const contributorMap = {};
+        clubStats.forEach(row => {
+          const player = String(row.player || "").trim();
+          if (!player) return;
+          if (!contributorMap[player]) contributorMap[player] = { goals: 0, assists: 0 };
+          contributorMap[player].goals += Number(row.goals || 0);
+          contributorMap[player].assists += Number(row.assist || row.assists || 0);
+        });
+
+        const contributors = Object.entries(contributorMap)
+          .map(([name, totals]) => ({ name, ...totals }))
+          .sort((a, b) => (b.goals + b.assists) - (a.goals + a.assists) || a.name.localeCompare(b.name))
+          .slice(0, 8);
+
+        contributorsBox.innerHTML = contributors.length
+          ? contributors.map(item => `
+              <div class="archive-item">
+                <div class="archive-item-title">${escapeHtml(item.name)}</div>
+                <div class="archive-item-meta">Goals: ${item.goals} · Assists: ${item.assists}</div>
+              </div>
+            `).join("")
+          : `<div class="archive-item"><div class="archive-item-title">No contributors yet</div><div class="archive-item-meta">No recorded stats for this team yet.</div></div>`;
+
+        showPage("teamProfilePage");
+      } catch (error) {
+        console.error("Could not load team profile:", error);
+        squadBody.innerHTML = `<tr><td colspan="4" class="empty">Could not load team profile.</td></tr>`;
+        totalsBox.innerHTML = `<div class="archive-item"><div class="archive-item-title">Could not load</div></div>`;
+        standingsBox.innerHTML = `<div class="archive-item"><div class="archive-item-title">Could not load</div></div>`;
+        contributorsBox.innerHTML = `<div class="archive-item"><div class="archive-item-title">Could not load</div></div>`;
+        showPage("teamProfilePage");
       }
     }
 
