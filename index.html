@@ -2507,15 +2507,6 @@
 
     <h1>Standings & Results</h1>
     <h2>Select a Competition</h2>
-
-    <div id="publicStandingsSelectionNotice" class="card" style="margin-bottom:16px;">
-      <div class="topbar">
-        <h3 style="margin:0;">Public Selected Competition</h3>
-        <button type="button" class="secondary-btn" id="publicStandingsSelectionOpenBtn" onclick="openPublicSelectedStandingsCompetition()">Open Selected Competition</button>
-      </div>
-      <div id="publicStandingsSelectionStatus" class="subtle" style="text-align:left; margin-top:10px;">No public competition selected yet.</div>
-    </div>
-
     <div class="menu-buttons">
       <button data-competition-button data-competition="Premier League" onclick="openStandingsCompetition('Premier League')">Premier League</button>
       <button data-competition-button data-competition="Serie A" onclick="openStandingsCompetition('Serie A')">Serie A</button>
@@ -3056,10 +3047,7 @@
           <div class="subtle" style="text-align:left; margin-top:8px;">
             When enabled for Champions League, the league stage generates 8 random games per club with no same-nation ties and no repeat opponents. Then the owner can send the next 8 clubs into Europa League knockouts and the next 8 into Conference League knockouts.
           </div>
-          <div class="action-row" style="justify-content:flex-start; margin-top:12px;">
-            <button type="button" class="purple-btn" onclick="setPublicActiveStandingsCompetition()">Set As Public Standings Competition</button>
-          </div>
-          <div id="publicStandingsOwnerStatus" class="subtle" style="text-align:left; margin-top:8px;"></div>
+
           <div id="europeanParticipantControls"></div>
           <div id="europeanParticipantStatus"></div>
         </div>
@@ -4513,113 +4501,9 @@ function renderEuropeanParticipantControlsWithSelection(selectedTeamList = []) {
   }
 }
 
-async function getPublicActiveStandingsCompetition() {
-  try {
-    const { data, error } = await supabaseClient
-      .from(STANDINGS_TABLE)
-      .select("competition, is_public_active")
-      .eq("is_public_active", true)
-      .limit(1);
 
-    if (error) {
-      console.error("Could not load public active standings competition:", error);
-      return null;
-    }
 
-    const row = Array.isArray(data) ? data[0] : data;
-    return row?.competition ? canonicalizeCompetitionName(row.competition) : null;
-  } catch (error) {
-    console.error("Could not load public active standings competition:", error);
-    return null;
-  }
-}
 
-async function renderPublicStandingsSelectionNotice() {
-  const status = document.getElementById("publicStandingsSelectionStatus");
-  const button = document.getElementById("publicStandingsSelectionOpenBtn");
-  const ownerStatus = document.getElementById("publicStandingsOwnerStatus");
-
-  const competition = await getPublicActiveStandingsCompetition();
-
-  if (status) {
-    status.textContent = competition
-      ? `${getCompetitionDisplayName(competition)} is currently selected as the public standings & results competition.`
-      : "No public standings competition is selected yet.";
-  }
-
-  if (button) {
-    button.disabled = !competition;
-    button.classList.toggle("hidden", !competition);
-  }
-
-  if (ownerStatus) {
-    ownerStatus.textContent = competition
-      ? `Current public standings competition: ${getCompetitionDisplayName(competition)}`
-      : "No public standings competition is selected yet.";
-  }
-}
-
-async function openPublicSelectedStandingsCompetition() {
-  const competition = await getPublicActiveStandingsCompetition();
-  if (!competition) {
-    alert("No public standings competition is selected yet.");
-    return;
-  }
-  await openStandingsCompetition(competition);
-}
-
-async function setPublicActiveStandingsCompetition() {
-  if (!isOwner()) {
-    alert("Only the owner can change the public standings competition.");
-    return;
-  }
-
-  const select = document.getElementById("adminEuropeanCompetitionSelect");
-  const competition = canonicalizeCompetitionName(select?.value || "Champions League");
-  await loadStandingsCompetitionState(competition);
-
-  const { error: clearError } = await supabaseClient
-    .from(STANDINGS_TABLE)
-    .update({ is_public_active: false })
-    .eq("is_public_active", true);
-
-  if (clearError) {
-    console.error("Could not clear previous public standings competition:", clearError);
-    alert("Could not change the public standings competition: " + clearError.message);
-    return;
-  }
-
-  const { error: setError } = await supabaseClient
-    .from(STANDINGS_TABLE)
-    .update({
-      is_public_active: true,
-      updated_by: currentUser?.username || "System",
-      updated_at: new Date().toISOString()
-    })
-    .ilike("competition", competition);
-
-  if (setError) {
-    console.error("Could not set public standings competition:", setError);
-    alert("Could not change the public standings competition: " + setError.message);
-    return;
-  }
-
-  await logAction(
-    "set_public_standings_competition",
-    `Set ${getCompetitionDisplayName(competition)} as the public standings & results competition.`,
-    competition,
-    null,
-    null
-  );
-
-  await renderPublicStandingsSelectionNotice();
-  await renderEuropeanParticipantControls();
-
-  const status = document.getElementById("publicStandingsOwnerStatus");
-  if (status) {
-    status.textContent = `${getCompetitionDisplayName(competition)} is now the public standings competition.`;
-  }
-}
 
 async function renderEuropeanParticipantControls() {
   const wrap = document.getElementById("europeanParticipantControls");
@@ -4644,7 +4528,6 @@ async function renderEuropeanParticipantControls() {
   }
 
   renderEuropeanParticipantControlsWithSelection([...selectedTeams]);
-  await renderPublicStandingsSelectionNotice();
 }
 
 function haveSameTeamSelection(a = [], b = []) {
@@ -8489,7 +8372,6 @@ if (budgetViewerNotice) budgetViewerNotice.classList.toggle("hidden", canManageS
   unsubscribeAllRealtimeChannels();
   refreshUserBars();
   await loadCompetitionVisibilitySettings();
-  await renderPublicStandingsSelectionNotice();
   showPage("standingsHomePage");
 }
 
@@ -13016,8 +12898,7 @@ async function applyForfeitResult() {
       await renderGlobalTables();
       await renderPlayerSpreadsheet("playerHomeSpreadsheetBody");
       populateBudgetTeamDropdowns();
-      await renderPublicStandingsSelectionNotice();
-      openFrontPage();
+          openFrontPage();
     }
 
     initApp();
