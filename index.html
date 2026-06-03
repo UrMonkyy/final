@@ -2647,7 +2647,7 @@
       </div>
 
       <div id="domesticAutoTimestampNote" class="subtle" style="text-align:left; margin-top:10px;">
-        Domestic leagues only: auto-fills each matchday with your saved Friday/Saturday/Sunday kickoff slots and saves them to Supabase. Use the selected-matchday weekend button above the fixtures list when you need to handle a one-week break manually.
+        Domestic leagues only: auto-fills each matchday with your saved Friday/Saturday/Sunday kickoff slots and saves them to Supabase. Champions League also supports the selected-matchday weekend button with unique kickoff slots across the upcoming Friday/Saturday/Sunday window. Saturday and Sunday are filled first and kept balanced before Friday is used, and only full and half hours are used.
       </div>
       <div id="fixtureGenNote" class="subtle" style="text-align:left; margin-top:10px;">
         Domestic leagues: round robin. Champions League: 6 Swiss-style fixtures by default, or 8 Swiss-style fixtures in UCL 2.0 mode, with no repeat opponent and no same-nation matches. Owner only can also simulate the full Champions League league stage with random results. International Cup: the first round can be generated here and each stage can auto-assign weekend timestamps with Saturday/Sunday priority. Domestic cups use a saved 8-team knockout path from the owner panel with quarter-finals, semi-finals, and a final.
@@ -3017,7 +3017,14 @@
             <h3 style="margin:0;">Competition Team Selectors</h3>
             <button class="secondary-btn" onclick="renderEuropeanParticipantControls()">Refresh</button>
           </div>
-          <p class="muted" style="margin-top:8px;">Owner only: choose the saved participant teams for European competitions and domestic cups. Cup selectors are limited to clubs from the matching nation league and save directly into the standings database state.</p>
+          <p class="muted" style="margin-top:8px;">Owner only: choose the saved participant teams for European competitions and domestic cups. For FA Cup, Coppa Italia, DFB Pokal, and Copa del Rey, you select 8 participants from the matching 10-team league before generating fixtures. These cup selections save directly into the standings database state.</p>
+          <div class="action-row" style="margin-top:12px;">
+            <button type="button" class="special-competition-btn" onclick="openDomesticCupParticipantSelector('FA Cup')">FA Cup Teams</button>
+            <button type="button" class="special-competition-btn" onclick="openDomesticCupParticipantSelector('Coppa Italia')">Coppa Italia Teams</button>
+            <button type="button" class="special-competition-btn" onclick="openDomesticCupParticipantSelector('DFB Pokal')">DFB Pokal Teams</button>
+            <button type="button" class="special-competition-btn" onclick="openDomesticCupParticipantSelector('Copa del Rey')">Copa del Rey Teams</button>
+          </div>
+
           <div class="form-grid" style="margin-top:12px;">
             <div>
               <label for="adminEuropeanCompetitionSelect">Competition</label>
@@ -3046,6 +3053,10 @@
           </div>
           <div class="subtle" style="text-align:left; margin-top:8px;">
             When enabled for Champions League, the league stage generates 8 random games per club with no same-nation ties and no repeat opponents. Then the owner can send the next 8 clubs into Europa League knockouts and the next 8 into Conference League knockouts.
+          </div>
+
+          <div id="domesticCupQuickSelectorStatus" class="subtle" style="text-align:left; margin-top:10px;">
+            Pick a competition above to edit the saved participant teams.
           </div>
 
           <div id="europeanParticipantControls"></div>
@@ -4447,14 +4458,16 @@ function renderEuropeanParticipantControlsWithSelection(selectedTeamList = []) {
   if (!wrap || !select) return;
 
   const competition = canonicalizeCompetitionName(select.value || "Champions League");
+  updateDomesticCupQuickSelectorStatus(competition);
   const selectedTeams = new Set((selectedTeamList || []).map(team => String(team || "").trim()).filter(Boolean));
 
   let grouped = {};
   let helperText = "";
   if (isDomesticCupCompetition(competition)) {
     const sourceCompetition = getDomesticCupSourceCompetition(competition);
-    grouped[sourceCompetition] = getDomesticCupTeamPool(competition);
-    helperText = `Select exactly 8 teams from ${sourceCompetition}.`;
+    const sourceTeams = getDomesticCupTeamPool(competition);
+    grouped[sourceCompetition] = sourceTeams;
+    helperText = `Select exactly 8 teams from the ${sourceCompetition} clubs shown below before generating the ${getCompetitionDisplayName(competition)} fixtures. This selection is saved in the standings database state.`;
   } else {
     grouped = getGroupedEuropeanTeamPool();
     helperText = competition === "Champions League"
@@ -4497,13 +4510,47 @@ function renderEuropeanParticipantControlsWithSelection(selectedTeamList = []) {
 
   if (status) {
     const count = selectedTeams.size;
-    status.innerHTML = `<div class="subtle" style="text-align:left; margin-top:10px;">Currently selected: ${count} team${count === 1 ? "" : "s"} for ${escapeHtml(getCompetitionDisplayName(competition))}.</div>`;
+    if (isDomesticCupCompetition(competition)) {
+      const sourceCompetition = getDomesticCupSourceCompetition(competition);
+      const sourceCount = getDomesticCupTeamPool(competition).length;
+      status.innerHTML = `<div class="subtle" style="text-align:left; margin-top:10px;">Currently selected: ${count} / 8 cup participants for ${escapeHtml(getCompetitionDisplayName(competition))} from ${escapeHtml(sourceCompetition)} (${sourceCount} available league teams). Saved selections are database-backed.</div>`;
+    } else {
+      status.innerHTML = `<div class="subtle" style="text-align:left; margin-top:10px;">Currently selected: ${count} team${count === 1 ? "" : "s"} for ${escapeHtml(getCompetitionDisplayName(competition))}.</div>`;
+    }
   }
 }
 
 
 
 
+
+function openDomesticCupParticipantSelector(competition) {
+  const select = document.getElementById("adminEuropeanCompetitionSelect");
+  const status = document.getElementById("domesticCupQuickSelectorStatus");
+  if (!select) return;
+  select.value = canonicalizeCompetitionName(competition);
+  if (status) {
+    const canonical = canonicalizeCompetitionName(competition);
+    const sourceCompetition = getDomesticCupSourceCompetition(canonical);
+    const poolSize = getDomesticCupTeamPool(canonical).length;
+    status.textContent = `${getCompetitionDisplayName(canonical)} selector loaded. Choose exactly 8 teams from the ${poolSize} ${sourceCompetition} clubs below, then save.`;
+  }
+  renderEuropeanParticipantControls();
+}
+
+function updateDomesticCupQuickSelectorStatus(competition) {
+  const status = document.getElementById("domesticCupQuickSelectorStatus");
+  if (!status) return;
+
+  const canonical = canonicalizeCompetitionName(competition);
+  if (isDomesticCupCompetition(canonical)) {
+    const sourceCompetition = getDomesticCupSourceCompetition(canonical);
+    const poolSize = getDomesticCupTeamPool(canonical).length;
+    status.textContent = `${getCompetitionDisplayName(canonical)} selector loaded. Choose exactly 8 teams from the ${poolSize} ${sourceCompetition} clubs below, then save.`;
+  } else {
+    status.textContent = `Editing ${getCompetitionDisplayName(canonical)} participant teams below.`;
+  }
+}
 
 async function renderEuropeanParticipantControls() {
   const wrap = document.getElementById("europeanParticipantControls");
@@ -4904,6 +4951,30 @@ function createEmptyStandingsState() {
   };
 }
 
+function syncFixtureTimestampFields(state) {
+  if (!state || !Array.isArray(state.fixtures)) return state;
+  state.fixtureTimestamps = state.fixtureTimestamps || {};
+
+  state.fixtures.forEach(round => {
+    (round || []).forEach(fixture => {
+      if (!fixture || !fixture.id) return;
+
+      const inlineTimestamp = typeof fixture.timestamp === "string" ? fixture.timestamp : "";
+      const mappedTimestamp = typeof state.fixtureTimestamps[fixture.id] === "string" ? state.fixtureTimestamps[fixture.id] : "";
+
+      if (mappedTimestamp) {
+        fixture.timestamp = mappedTimestamp;
+      } else if (inlineTimestamp) {
+        state.fixtureTimestamps[fixture.id] = inlineTimestamp;
+      } else {
+        fixture.timestamp = "";
+      }
+    });
+  });
+
+  return state;
+}
+
 function normalizeStandingsState(value) {
   const base = createEmptyStandingsState();
   const safe = { ...base, ...(value || {}) };
@@ -4916,7 +4987,7 @@ function normalizeStandingsState(value) {
   safe.viewerVisible = safe.viewerVisible !== false;
   if (!Array.isArray(safe.participantTeams)) safe.participantTeams = [];
 
-  return safe;
+  return syncFixtureTimestampFields(safe);
 }
 
 function getCompetitionStandingsState(competition) {
@@ -4985,7 +5056,7 @@ async function loadStandingsCompetitionState(competition) {
 
 async function setCompetitionStandingsState(competition, value) {
   competition = canonicalizeCompetitionName(competition);
-  const normalized = normalizeStandingsState(value);
+  const normalized = syncFixtureTimestampFields(normalizeStandingsState(value));
   standingsDbCache[competition] = normalized;
 
   const payload = {
@@ -6369,7 +6440,15 @@ function generateUelKnockout(uclStandings, uelStandings) {
 }
 
 function getStandingsFixtureTimestamp(state, fixtureId) {
-  return state?.fixtureTimestamps?.[fixtureId] || "";
+  const mapped = state?.fixtureTimestamps?.[fixtureId] || "";
+  if (mapped) return mapped;
+
+  const rounds = Array.isArray(state?.fixtures) ? state.fixtures : [];
+  for (const round of rounds) {
+    const fixture = (round || []).find(item => item?.id === fixtureId);
+    if (fixture?.timestamp) return fixture.timestamp;
+  }
+  return "";
 }
 
 function getStandingsFixtureTimestampTag(state, fixtureId, style = "F") {
@@ -6553,6 +6632,67 @@ function getUpcomingWeeklySlotDate(baseDate, weekday, hour, minute) {
   return candidate;
 }
 
+function buildPreferredWeekendSlots(baseDate, slotDefinitions) {
+  const slots = [];
+  const used = new Set();
+  const minutePriority = [0, 30];
+
+  const definitions = (slotDefinitions || []).map(def => ({
+    weekday: Number(def.weekday),
+    startHour: Number(def.startHour),
+    endHour: Number(def.endHour)
+  })).filter(def =>
+    !Number.isNaN(def.weekday) &&
+    !Number.isNaN(def.startHour) &&
+    !Number.isNaN(def.endHour)
+  );
+
+  const pushSlot = (weekday, hour, minute) => {
+    const slot = getUpcomingWeeklySlotDate(baseDate, weekday, hour, minute);
+    const key = slot.toISOString();
+    if (used.has(key)) return;
+    used.add(key);
+    slots.push(slot);
+  };
+
+  // First pass: strongly prioritize Saturday and Sunday and keep them balanced.
+  const primaryDefinitions = definitions.filter(def => def.weekday === 6 || def.weekday === 0);
+  const fallbackDefinitions = definitions.filter(def => def.weekday !== 6 && def.weekday !== 0);
+
+  const maxPrimaryEndHour = primaryDefinitions.reduce((max, def) => Math.max(max, def.endHour), 0);
+  for (let hour = 0; hour <= maxPrimaryEndHour; hour++) {
+    for (const minute of minutePriority) {
+      primaryDefinitions.forEach(def => {
+        if (hour < def.startHour || hour > def.endHour) return;
+        pushSlot(def.weekday, hour, minute);
+      });
+    }
+  }
+
+  // Second pass: only after Saturday and Sunday slots are exhausted, use Friday.
+  const maxFallbackEndHour = fallbackDefinitions.reduce((max, def) => Math.max(max, def.endHour), 0);
+  for (let hour = 0; hour <= maxFallbackEndHour; hour++) {
+    for (const minute of minutePriority) {
+      fallbackDefinitions.forEach(def => {
+        if (hour < def.startHour || hour > def.endHour) return;
+        pushSlot(def.weekday, hour, minute);
+      });
+    }
+  }
+
+  return slots;
+}
+
+function getChampionsLeagueUpcomingWeekendSlotPool(baseDate) {
+  // Priority order: Saturday, Sunday, then Friday.
+  // Use only full and half hours.
+  return buildPreferredWeekendSlots(baseDate, [
+    { weekday: 6, startHour: 17, endHour: 22 }, // Saturday 17:00-22:00
+    { weekday: 0, startHour: 17, endHour: 21 }, // Sunday 17:00-21:00
+    { weekday: 5, startHour: 18, endHour: 22 }  // Friday 18:00-22:00
+  ]);
+}
+
 function buildWeekendHalfHourSlots(baseDate, slotDefinitions) {
   const slots = [];
   (slotDefinitions || []).forEach(def => {
@@ -6588,7 +6728,9 @@ function assignRoundTimestampsFromSlots(state, roundIndex, slots) {
     if (!fixture?.id) return;
     const slot = slots[fixtureIndex] || slots[slots.length - 1];
     if (!slot) return;
-    state.fixtureTimestamps[fixture.id] = slot.toISOString();
+    const iso = slot.toISOString();
+    state.fixtureTimestamps[fixture.id] = iso;
+    fixture.timestamp = iso;
     assigned += 1;
   });
   return assigned;
@@ -9583,10 +9725,13 @@ async function autoSetSelectedMatchdayUpcomingWeekendTimestamps() {
       return slot ? getUpcomingWeeklySlotDate(baseDate, slot.weekday, slot.hour, slot.minute) : null;
     }).filter(Boolean);
     assigned = assignRoundTimestampsFromSlots(state, roundIndex, slots);
+  } else if (currentStandingsCompetition === "Champions League") {
+    const slots = getChampionsLeagueUpcomingWeekendSlotPool(baseDate);
+    assigned = assignRoundTimestampsFromSlots(state, roundIndex, slots);
   } else if (isConfederationCupCompetition(currentStandingsCompetition)) {
     assigned = assignConfederationCupRoundTimestamps(state, roundIndex, baseDate);
   } else {
-    alert("Selected-matchday weekend timestamps are currently available for the domestic leagues and International Cup.");
+    alert("Selected-matchday weekend timestamps are currently available for the domestic leagues, Champions League, and International Cup.");
     return;
   }
 
@@ -9610,7 +9755,18 @@ async function updateStandingsFixtureTimestamp(fixtureId, value) {
 
   const state = getCompetitionStandingsState(currentStandingsCompetition);
   const previousState = cloneStandingsState(state);
-  state.fixtureTimestamps[fixtureId] = value ? new Date(value).toISOString() : "";
+  const isoValue = value ? new Date(value).toISOString() : "";
+  state.fixtureTimestamps[fixtureId] = isoValue;
+
+  const rounds = Array.isArray(state.fixtures) ? state.fixtures : [];
+  rounds.forEach(round => {
+    (round || []).forEach(fixture => {
+      if (fixture?.id === fixtureId) {
+        fixture.timestamp = isoValue;
+      }
+    });
+  });
+
   await setCompetitionStandingsState(currentStandingsCompetition, state);
   await logAction(
     "update_fixture_timestamp",
@@ -9998,12 +10154,18 @@ ${detail}`);
       }
       unsubscribeAllRealtimeChannels();
       refreshUserBars();
+      showPage("adminPage");
       await renderUsersTable();
       await renderLogsTable();
       await renderCompetitionVisibilityControls();
+
+      const adminCompetitionSelect = document.getElementById("adminEuropeanCompetitionSelect");
+      if (adminCompetitionSelect && !adminCompetitionSelect.value) {
+        adminCompetitionSelect.value = "Champions League";
+      }
+
       await renderEuropeanParticipantControls();
       clearStatus("adminStatus");
-      showPage("adminPage");
       subscribeAdminRealtime();
     }
 
