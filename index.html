@@ -2650,7 +2650,7 @@
         Domestic leagues auto-fill each matchday with your saved Friday/Saturday/Sunday kickoff slots and save them to Supabase. Champions League and the domestic cups also support the selected-matchday weekend button with their own saved kickoff patterns.
       </div>
       <div id="fixtureGenNote" class="subtle" style="text-align:left; margin-top:10px;">
-        Domestic leagues: round robin. Champions League: 6 Swiss-style fixtures by default, or 8 Swiss-style fixtures in UCL 2.0 mode, with no repeat opponent and no same-nation matches. Owner only can also simulate the full Champions League league stage with random results. International Cup: the first round can be generated here and each stage can auto-assign weekend timestamps with Saturday/Sunday priority. Domestic cups use a saved 8-team knockout path from the owner panel with quarter-finals, semi-finals, and a final.
+        Domestic leagues: round robin. Champions League: owner-selected 6 or 8 Swiss-style fixtures, with no repeat opponent and no same-nation matches. Owner only can also simulate the full Champions League league stage with random results. International Cup: the first round can be generated here and each stage can auto-assign weekend timestamps with Saturday/Sunday priority. Domestic cups use a saved 8-team knockout path from the owner panel with quarter-finals, semi-finals, and a final.
       </div>
       <div id="knockoutEligibilityNote" class="subtle" style="text-align:left; margin-top:8px;">
         Knockout generation checks whether all required fixture results are entered first.
@@ -3044,6 +3044,13 @@
                 <option value="16">Top 16 → Champions League knockouts</option>
               </select>
             </div>
+            <div>
+              <label for="uclLeagueStageGames">Champions League League Phase Games</label>
+              <select id="uclLeagueStageGames">
+                <option value="6">6 games</option>
+                <option value="8">8 games</option>
+              </select>
+            </div>
           </div>
           <div class="action-row" style="justify-content:flex-start; margin-top:10px;">
             <label for="ucl2FormatToggle" style="display:inline-flex; align-items:center; gap:10px; font-weight:600; cursor:pointer; margin:0;">
@@ -3058,7 +3065,7 @@
             </label>
           </div>
           <div class="subtle" style="text-align:left; margin-top:8px;">
-            When enabled for Champions League, the league stage generates 8 random games per club with no same-nation ties and no repeat opponents. Then the owner can send clubs into Champions League, Europa League, and optionally Conference League knockouts.
+            For Champions League, the owner can choose 6 or 8 league-phase games. UCL 2.0 still controls the split into Champions League, Europa League, and optionally Conference League knockouts.
           </div>
 
           <div id="domesticCupQuickSelectorStatus" class="subtle" style="text-align:left; margin-top:10px;">
@@ -4285,6 +4292,12 @@ const competitions = [
       return raw === 16 ? 16 : 8;
     }
 
+    function getUclLeagueStageGameCount(state = getCompetitionStandingsState("Champions League")) {
+      const raw = Number(state?.knockout?.uclLeagueStageGames || 0);
+      if (raw === 6 || raw === 8) return raw;
+      return isUcl2Enabled(state) ? 8 : 6;
+    }
+
     function isUcl2DownstreamCompetition(competition, state = getCompetitionStandingsState(competition)) {
       const canonical = canonicalizeCompetitionName(competition);
       return Boolean(
@@ -4296,7 +4309,7 @@ const competitions = [
     function getLeagueStageRoundCount(competition, state = getCompetitionStandingsState(competition)) {
       const canonical = canonicalizeCompetitionName(competition);
       if (canonical === "Champions League") {
-        return isUcl2Enabled(state) ? 8 : 6;
+        return getUclLeagueStageGameCount(state);
       }
       if (canonical === "Europa League") {
         return isUcl2DownstreamCompetition(canonical, state) ? 0 : 6;
@@ -4645,6 +4658,7 @@ async function renderEuropeanParticipantControls() {
   const championsState = getCompetitionStandingsState("Champions League");
   const ucl2Toggle = document.getElementById("ucl2FormatToggle");
   const ucl2Qualifiers = document.getElementById("ucl2ChampionsQualifiers");
+  const uclLeagueStageGames = document.getElementById("uclLeagueStageGames");
   const ucl2DisableConferenceToggle = document.getElementById("ucl2DisableConferenceLeagueToggle");
   if (ucl2Toggle) {
     ucl2Toggle.checked = isUcl2Enabled(championsState);
@@ -4653,6 +4667,10 @@ async function renderEuropeanParticipantControls() {
   if (ucl2Qualifiers) {
     ucl2Qualifiers.value = String(getUcl2ChampionsQualifierCount(championsState));
     ucl2Qualifiers.disabled = competition !== "Champions League";
+  }
+  if (uclLeagueStageGames) {
+    uclLeagueStageGames.value = String(getUclLeagueStageGameCount(championsState));
+    uclLeagueStageGames.disabled = competition !== "Champions League";
   }
   if (ucl2DisableConferenceToggle) {
     ucl2DisableConferenceToggle.checked = isUcl2ConferenceLeagueDisabled(championsState);
@@ -4700,6 +4718,9 @@ async function saveEuropeanParticipantSelection(useDefault = false) {
   const ucl2ChampionsQualifiers = competition === "Champions League"
     ? (Number(document.getElementById("ucl2ChampionsQualifiers")?.value || 8) === 16 ? 16 : 8)
     : 8;
+  const uclLeagueStageGames = competition === "Champions League"
+    ? (Number(document.getElementById("uclLeagueStageGames")?.value || (ucl2Enabled ? 8 : 6)) === 8 ? 8 : 6)
+    : 6;
   const ucl2DisableConferenceLeague = competition === "Champions League"
     ? Boolean(document.getElementById("ucl2DisableConferenceLeagueToggle")?.checked)
     : false;
@@ -4734,12 +4755,14 @@ async function saveEuropeanParticipantSelection(useDefault = false) {
   const previousTeams = Array.isArray(state.participantTeams) ? [...state.participantTeams] : [];
   const previousUcl2Enabled = Boolean(state.knockout?.ucl2Enabled);
   const previousUcl2Qualifiers = Number(state.knockout?.ucl2ChampionsQualifiers || 8) === 16 ? 16 : 8;
+  const previousUclLeagueStageGames = getUclLeagueStageGameCount(state);
   const previousUcl2DisableConferenceLeague = Boolean(state.knockout?.ucl2DisableConferenceLeague);
 
   const participantSelectionChanged = !haveSameTeamSelection(previousTeams, uniqueTeams);
   const ucl2SettingChanged = competition === "Champions League" && (
     previousUcl2Enabled !== ucl2Enabled ||
     previousUcl2Qualifiers !== ucl2ChampionsQualifiers ||
+    previousUclLeagueStageGames !== uclLeagueStageGames ||
     previousUcl2DisableConferenceLeague !== ucl2DisableConferenceLeague
   );
 
@@ -4748,6 +4771,7 @@ async function saveEuropeanParticipantSelection(useDefault = false) {
     ...(state.knockout || {}),
     ucl2Enabled: competition === "Champions League" ? ucl2Enabled : Boolean(state.knockout?.ucl2Enabled),
     ucl2ChampionsQualifiers: competition === "Champions League" ? ucl2ChampionsQualifiers : Number(state.knockout?.ucl2ChampionsQualifiers || 8),
+    uclLeagueStageGames: competition === "Champions League" ? uclLeagueStageGames : Number(state.knockout?.uclLeagueStageGames || 0),
     ucl2DisableConferenceLeague: competition === "Champions League" ? ucl2DisableConferenceLeague : Boolean(state.knockout?.ucl2DisableConferenceLeague)
   };
 
@@ -4764,7 +4788,7 @@ async function saveEuropeanParticipantSelection(useDefault = false) {
   standingsDbCache[competition] = normalizeStandingsState(state);
   await logAction(
     "update_competition_participants",
-    `Saved ${uniqueTeams.length} participant team${uniqueTeams.length === 1 ? "" : "s"} for ${getCompetitionDisplayName(competition)}${competition === "Champions League" && ucl2Enabled ? ` with UCL 2.0 enabled (${ucl2ChampionsQualifiers} Champions League qualifiers${ucl2DisableConferenceLeague ? ", Conference League disabled" : ""}).` : "."}`,
+    `Saved ${uniqueTeams.length} participant team${uniqueTeams.length === 1 ? "" : "s"} for ${getCompetitionDisplayName(competition)}${competition === "Champions League" && ucl2Enabled ? ` with UCL 2.0 enabled (${ucl2ChampionsQualifiers} Champions League qualifiers, ${uclLeagueStageGames} league-phase games${ucl2DisableConferenceLeague ? ", Conference League disabled" : ""}).` : "."}`,
     competition,
     null,
     createStandingsUndoPayload(previousState, competition)
@@ -4774,7 +4798,7 @@ async function saveEuropeanParticipantSelection(useDefault = false) {
     const resetNotice = participantSelectionChanged || ucl2SettingChanged
       ? " Fixtures, results, and knockout data were reset to match the new setup."
       : "";
-    status.innerHTML = `<div class="status ok">Saved ${uniqueTeams.length} participant team${uniqueTeams.length === 1 ? "" : "s"} for ${escapeHtml(getCompetitionDisplayName(competition))}${competition === "Champions League" && ucl2Enabled ? ` · UCL 2.0 on · Top ${ucl2ChampionsQualifiers} to Champions League knockouts${ucl2DisableConferenceLeague ? " · Conference League off" : ""}` : ""}.${resetNotice}</div>`;
+    status.innerHTML = `<div class="status ok">Saved ${uniqueTeams.length} participant team${uniqueTeams.length === 1 ? "" : "s"} for ${escapeHtml(getCompetitionDisplayName(competition))}${competition === "Champions League" && ucl2Enabled ? ` · UCL 2.0 on · ${uclLeagueStageGames} league games · Top ${ucl2ChampionsQualifiers} to Champions League knockouts${ucl2DisableConferenceLeague ? " · Conference League off" : ""}` : ""}.${resetNotice}</div>`;
   }
   await renderEuropeanParticipantControls();
 }
@@ -5131,7 +5155,7 @@ async function loadStandingsCompetitionState(competition) {
     return emptyState;
   }
 
-  const normalized = normalizeStandingsState({
+  const normalized = normalizeFixtureRoundNumbersFromDb(competition, normalizeStandingsState({
     results: data.results,
     fixtures: data.fixtures,
     fixtureTimestamps: data.fixture_timestamps,
@@ -5139,10 +5163,55 @@ async function loadStandingsCompetitionState(competition) {
     knockout: data.knockout,
     viewerVisible: data.viewer_visible,
     participantTeams: data.participant_teams
-  });
+  }));
 
   standingsDbCache[competition] = normalized;
   return normalized;
+}
+
+function shouldSaveFixtureRoundNumberAsLabel(competition, fixture, roundIndex, state) {
+  const canonical = canonicalizeCompetitionName(competition);
+  if (isDomesticCupCompetition(canonical)) return true;
+  if (canonical !== "Champions League" && canonical !== "Europa League") return false;
+
+  const label = fixture?.stageLabel || getStandingsRoundLabel(canonical, roundIndex + 1);
+  return /Play-offs|Round of 16|Quarter-finals|Semi-finals|Final/i.test(String(label || ""));
+}
+
+function prepareFixturesForStandingsDb(competition, state) {
+  const canonical = canonicalizeCompetitionName(competition);
+  const rounds = Array.isArray(state?.fixtures) ? state.fixtures : [];
+
+  return rounds.map((round, roundIndex) => (round || []).map(fixture => {
+    const cleanFixture = { ...(fixture || {}) };
+    const label = cleanFixture.stageLabel || getStandingsRoundLabel(canonical, roundIndex + 1);
+
+    if (shouldSaveFixtureRoundNumberAsLabel(canonical, cleanFixture, roundIndex, state)) {
+      cleanFixture.roundNumber = label;
+      cleanFixture.stageLabel = label;
+    }
+
+    return cleanFixture;
+  }));
+}
+
+function normalizeFixtureRoundNumbersFromDb(competition, state) {
+  const canonical = canonicalizeCompetitionName(competition);
+  if (!state || !Array.isArray(state.fixtures)) return state;
+
+  state.fixtures = state.fixtures.map((round, roundIndex) => (round || []).map(fixture => {
+    const cleanFixture = { ...(fixture || {}) };
+    const parsedRound = Number(cleanFixture.roundNumber);
+
+    if (!Number.isInteger(parsedRound) || parsedRound < 1) {
+      cleanFixture.stageLabel = cleanFixture.stageLabel || String(cleanFixture.roundNumber || getStandingsRoundLabel(canonical, roundIndex + 1));
+      cleanFixture.roundNumber = roundIndex + 1;
+    }
+
+    return cleanFixture;
+  }));
+
+  return state;
 }
 
 async function setCompetitionStandingsState(competition, value) {
@@ -5153,7 +5222,7 @@ async function setCompetitionStandingsState(competition, value) {
   const payload = {
     competition,
     results: normalized.results,
-    fixtures: normalized.fixtures,
+    fixtures: prepareFixturesForStandingsDb(competition, normalized),
     fixture_timestamps: normalized.fixtureTimestamps,
     selected_matchday: normalized.selectedMatchday,
     knockout: normalized.knockout,
@@ -6176,7 +6245,7 @@ function decorateNamedRoundsWithMeta(rounds, competition, startRoundNumber = 1) 
       roundNumber,
       stageLabel,
       slotKey: matchIndex + 1,
-      isKnockout: isEuropeanCompetitionWithKnockout(competition) && roundNumber >= 7,
+      isKnockout: isEuropeanCompetitionWithKnockout(competition) && roundNumber >= getLeagueStageRoundCount(competition, getCompetitionStandingsState(competition)) + 1,
       home: match.home,
       away: match.away
     }));
@@ -6327,7 +6396,7 @@ function generateSwissFixturesForCompetition(competition, roundsCount = 6, maxAt
 
 function generateChampionsLeagueFixtures() {
   const clState = getCompetitionStandingsState("Champions League");
-  return generateSwissFixturesForCompetition("Champions League", isUcl2Enabled(clState) ? 8 : 6, 900);
+  return generateSwissFixturesForCompetition("Champions League", getUclLeagueStageGameCount(clState), 900);
 }
 
 function generateEuropaLeagueFixtures() {
@@ -9939,12 +10008,14 @@ async function generateCompetitionFixtures() {
     state.knockout = {
       ...(state.knockout || {}),
       ucl2Enabled: isUcl2Enabled(state),
-      ucl2ChampionsQualifiers: getUcl2ChampionsQualifierCount(state)
+      ucl2ChampionsQualifiers: getUcl2ChampionsQualifierCount(state),
+      uclLeagueStageGames: getUclLeagueStageGameCount(state),
+      ucl2DisableConferenceLeague: isUcl2ConferenceLeagueDisabled(state)
     };
     await setCompetitionStandingsState(currentStandingsCompetition, state);
     await logAction(
       "generate_standings_fixtures",
-      `Generated Champions League ${isUcl2Enabled(state) ? "UCL 2.0 " : ""}fixtures.`,
+      `Generated Champions League ${isUcl2Enabled(state) ? "UCL 2.0 " : ""}${getUclLeagueStageGameCount(state)}-game league-phase fixtures.`,
       currentStandingsCompetition,
       null,
       createStandingsUndoPayload(previousState)
