@@ -4114,10 +4114,14 @@ const DOMESTIC_CUP_TIMESTAMP_CONFIG = {
   }
 };
 
-function assignDomesticCupRoundTimestamps(state, competition, roundIndex, baseDate = new Date()) {
+function getDomesticCupWeekendSlotPool(competition, roundIndex, baseDate = new Date()) {
   const canonical = canonicalizeCompetitionName(competition);
   const schedule = DOMESTIC_CUP_TIMESTAMP_CONFIG[canonical]?.[Number(roundIndex)] || [];
-  const slots = schedule.map(slot => getUpcomingWeeklySlotDate(baseDate, slot.weekday, slot.hour, slot.minute));
+  return schedule.map(slot => getUpcomingWeeklySlotDate(baseDate, slot.weekday, slot.hour, slot.minute));
+}
+
+function assignDomesticCupRoundTimestamps(state, competition, roundIndex, baseDate = new Date()) {
+  const slots = getDomesticCupWeekendSlotPool(competition, roundIndex, baseDate);
   return assignRoundTimestampsFromSlots(state, roundIndex, slots);
 }
 
@@ -5097,11 +5101,9 @@ function syncFixtureTextFields(state) {
 
   state.fixtures.forEach(round => {
     (round || []).forEach(fixture => {
-      if (!fixture || !fixture.home || !fixture.away) return;
-
-      const text = formatStandingsFixtureText(fixture, state);
-      fixture.fixtureText = text;
-      fixture.copyText = text;
+      if (!fixture) return;
+      delete fixture.fixtureText;
+      delete fixture.copyText;
     });
   });
 
@@ -6650,12 +6652,7 @@ function formatStandingsFixtureText(fixture, state) {
 }
 
 function buildStandingsFixtureAnnouncement(fixture, state) {
-  const text = formatStandingsFixtureText(fixture, state);
-  if (fixture) {
-    fixture.fixtureText = text;
-    fixture.copyText = text;
-  }
-  return text;
+  return formatStandingsFixtureText(fixture, state);
 }
 
 function getSelectedKnockoutStageLabel(competition, state) {
@@ -6966,6 +6963,30 @@ function assignRoundTimestampsFromSlots(state, roundIndex, slots) {
       history[team] = history[team] || {};
       history[team][signature] = (history[team][signature] || 0) + 1;
     });
+    assigned += 1;
+  });
+
+  return assigned;
+}
+
+function assignRoundTimestampsFromSlotsInFixtureOrder(state, roundIndex, slots) {
+  if (!state || !Array.isArray(state.fixtures)) return 0;
+  const round = state.fixtures[roundIndex] || [];
+  const validSlots = (slots || [])
+    .filter(slot => slot instanceof Date && !Number.isNaN(slot.getTime()))
+    .sort((a, b) => a.getTime() - b.getTime());
+  if (!round.length || !validSlots.length) return 0;
+
+  state.fixtureTimestamps = state.fixtureTimestamps || {};
+  let assigned = 0;
+
+  round.forEach((fixture, fixtureIndex) => {
+    if (!fixture?.id) return;
+    const slot = validSlots[fixtureIndex];
+    if (!slot) return;
+    const iso = slot.toISOString();
+    state.fixtureTimestamps[fixture.id] = iso;
+    fixture.timestamp = iso;
     assigned += 1;
   });
 
@@ -9971,14 +9992,16 @@ async function autoSetSelectedMatchdayUpcomingWeekendTimestamps() {
       const slot = slotPattern[fixtureIndex % slotPattern.length];
       return slot ? getUpcomingWeeklySlotDate(baseDate, slot.weekday, slot.hour, slot.minute) : null;
     }).filter(Boolean);
-    assigned = assignRoundTimestampsFromSlots(state, roundIndex, slots);
+    assigned = assignRoundTimestampsFromSlotsInFixtureOrder(state, roundIndex, slots);
   } else if (currentStandingsCompetition === "Champions League") {
     const slots = getChampionsLeagueUpcomingWeekendSlotPool(baseDate);
-    assigned = assignRoundTimestampsFromSlots(state, roundIndex, slots);
+    assigned = assignRoundTimestampsFromSlotsInFixtureOrder(state, roundIndex, slots);
   } else if (isDomesticCupCompetition(currentStandingsCompetition)) {
-    assigned = assignDomesticCupRoundTimestamps(state, currentStandingsCompetition, roundIndex, baseDate);
+    const slots = getDomesticCupWeekendSlotPool(currentStandingsCompetition, roundIndex, baseDate);
+    assigned = assignRoundTimestampsFromSlotsInFixtureOrder(state, roundIndex, slots);
   } else if (isConfederationCupCompetition(currentStandingsCompetition)) {
-    assigned = assignConfederationCupRoundTimestamps(state, roundIndex, baseDate);
+    const slots = getConfederationCupWeekendSlotPool(baseDate);
+    assigned = assignRoundTimestampsFromSlotsInFixtureOrder(state, roundIndex, slots);
   } else {
     alert("Selected-matchday weekend timestamps are currently available for the domestic leagues, Champions League, domestic cups, and International Cup.");
     return;
