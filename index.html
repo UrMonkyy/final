@@ -4825,7 +4825,7 @@ async function saveEuropeanParticipantSelection(useDefault = false) {
 
   const saved = await setCompetitionStandingsState(competition, state);
   if (!saved) return;
-  standingsDbCache[competition] = normalizeStandingsState(state);
+  standingsDbCache[competition] = normalizeStandingsState(state, competition);
   await logAction(
     "update_competition_participants",
     `Saved ${uniqueTeams.length} participant team${uniqueTeams.length === 1 ? "" : "s"} for ${getCompetitionDisplayName(competition)}${competition === "Champions League" && ucl2Enabled ? ` with UCL 2.0 enabled (${ucl2LeagueStageGames} league-stage fixtures, ${ucl2ChampionsQualifiers} Champions League qualifiers${ucl2EuropaRoundOf16 ? ", Europa League Round of 16" : ""}${ucl2DisableConferenceLeague ? ", Conference League disabled" : ""}).` : "."}`,
@@ -5144,7 +5144,109 @@ function syncFixtureTextFields(state) {
   return state;
 }
 
-function normalizeStandingsState(value) {
+function getEuropeanKnockoutStageLabelsForDatabase(competition, state) {
+  const canonical = canonicalizeCompetitionName(competition);
+  const ucl2Source = Boolean(state?.knockout?.ucl2Source || (canonical === "Champions League" && isUcl2Enabled(state)));
+  if (ucl2Source && canonical === "Europa League" && state?.knockout?.ucl2EuropaRoundOf16) return ["Round of 16", "Quarter-finals", "Semi-finals", "Final"];
+  if (ucl2Source && canonical !== "Champions League") return ["Quarter-finals", "Semi-finals", "Final"];
+  if (ucl2Source && canonical === "Champions League" && getUcl2ChampionsQualifierCount(state) === 8) return ["Quarter-finals", "Semi-finals", "Final"];
+  return EURO_KNOCKOUT_STAGE_LABELS;
+}
+
+function getFixtureDatabaseRoundLabel(competition, state, fixture, roundIndex) {
+  const canonical = canonicalizeCompetitionName(competition);
+  const numericRound = Number(fixture?.roundNumber || roundIndex + 1);
+
+  if (isDomesticCupCompetition(canonical)) {
+    return fixture?.stageLabel || getDomesticCupRoundLabel(roundIndex);
+  }
+
+  if (isConfederationCupCompetition(canonical)) {
+    return fixture?.stageLabel || getConfederationCupRoundLabelByFixtureCount((state?.fixtures?.[roundIndex] || []).length, roundIndex);
+  }
+
+  if (isEuropeanCompetitionWithKnockout(canonical)) {
+    const leagueRounds = getLeagueStageRoundCount(canonical, state);
+    const isKnockoutRound = Boolean(fixture?.isKnockout) || numericRound > leagueRounds || roundIndex + 1 > leagueRounds;
+    if (isKnockoutRound) {
+      if (fixture?.stageLabel) return fixture.stageLabel;
+      const labels = getEuropeanKnockoutStageLabelsForDatabase(canonical, state);
+      return labels[Math.max(0, numericRound - leagueRounds - 1)] || `Round ${numericRound}`;
+    }
+  }
+
+  return null;
+}
+
+function getRuntimeRoundNumberFromSavedLabel(competition, state, fixture, roundIndex) {
+  const rawRound = fixture?.roundNumber;
+  if (Number.isFinite(Number(rawRound))) return Number(rawRound);
+
+  const label = String(rawRound || fixture?.stageLabel || "").trim();
+  if (!label) return roundIndex + 1;
+
+  const canonical = canonicalizeCompetitionName(competition);
+  const matchdayMatch = label.match(/matchday\s+(\d+)/i) || label.match(/^round\s+(\d+)$/i);
+  if (matchdayMatch) return Number(matchdayMatch[1]);
+
+  if (isDomesticCupCompetition(canonical)) {
+    const labels = ["Quarter-finals", "Semi-finals", "Final"];
+    const index = labels.findIndex(item => item.toLowerCase() === label.toLowerCase());
+    return index >= 0 ? index + 1 : roundIndex + 1;
+  }
+
+  if (isConfederationCupCompetition(canonical)) {
+    const labels = ["First Round", "Second Round", "Quarter-finals", "Semi-finals", "Final"];
+    const index = labels.findIndex(item => item.toLowerCase() === label.toLowerCase());
+    return index >= 0 ? index + 1 : roundIndex + 1;
+  }
+
+  if (isEuropeanCompetitionWithKnockout(canonical)) {
+    const leagueRounds = getLeagueStageRoundCount(canonical, state);
+    const labels = getEuropeanKnockoutStageLabelsForDatabase(canonical, state);
+    const index = labels.findIndex(item => item.toLowerCase() === label.toLowerCase());
+    return index >= 0 ? leagueRounds + index + 1 : roundIndex + 1;
+  }
+
+  return roundIndex + 1;
+}
+
+function normalizeFixtureRoundNumbersForRuntime(state, competition = "") {
+  if (!state || !Array.isArray(state.fixtures) || !competition) return state;
+
+  state.fixtures.forEach((round, roundIndex) => {
+    (round || []).forEach(fixture => {
+      if (!fixture) return;
+      const savedLabel = typeof fixture.roundNumber === "string" && !Number.isFinite(Number(fixture.roundNumber))
+        ? fixture.roundNumber.trim()
+        : "";
+      if (savedLabel && !fixture.stageLabel) fixture.stageLabel = savedLabel;
+      fixture.roundNumber = getRuntimeRoundNumberFromSavedLabel(competition, state, fixture, roundIndex);
+    });
+  });
+
+  return state;
+}
+
+function serializeStandingsFixturesForDatabase(fixtures, competition, state) {
+  if (!Array.isArray(fixtures)) return [];
+
+  return fixtures.map((round, roundIndex) => (Array.isArray(round) ? round : []).map(fixture => {
+    const cleanFixture = { ...(fixture || {}) };
+    delete cleanFixture.fixtureText;
+    delete cleanFixture.copyText;
+
+    const stageRoundLabel = getFixtureDatabaseRoundLabel(competition, state, cleanFixture, roundIndex);
+    if (stageRoundLabel) {
+      cleanFixture.roundNumber = stageRoundLabel;
+      if (!cleanFixture.stageLabel) cleanFixture.stageLabel = stageRoundLabel;
+    }
+
+    return cleanFixture;
+  }));
+}
+
+function normalizeStandingsState(value, competition = "") {
   const base = createEmptyStandingsState();
   const safe = { ...base, ...(value || {}) };
 
@@ -5161,6 +5263,7 @@ function normalizeStandingsState(value) {
     safe.knockout.participantTeams = [...safe.participantTeams];
   }
 
+  normalizeFixtureRoundNumbersForRuntime(safe, competition);
   return syncFixtureTimestampFields(safe);
 }
 
@@ -5222,7 +5325,7 @@ async function loadStandingsCompetitionState(competition) {
     knockout: data.knockout,
     viewerVisible: data.viewer_visible,
     participantTeams: data.participant_teams
-  });
+  }, competition);
 
   standingsDbCache[competition] = normalized;
   return normalized;
@@ -5230,13 +5333,14 @@ async function loadStandingsCompetitionState(competition) {
 
 async function setCompetitionStandingsState(competition, value) {
   competition = canonicalizeCompetitionName(competition);
-  const normalized = syncFixtureTimestampFields(normalizeStandingsState(value));
+  const normalized = syncFixtureTimestampFields(normalizeStandingsState(value, competition));
   standingsDbCache[competition] = normalized;
+  const databaseFixtures = serializeStandingsFixturesForDatabase(normalized.fixtures, competition, normalized);
 
   const payload = {
     competition,
     results: normalized.results,
-    fixtures: normalized.fixtures,
+    fixtures: databaseFixtures,
     fixture_timestamps: normalized.fixtureTimestamps,
     selected_matchday: normalized.selectedMatchday,
     knockout: normalized.knockout,
@@ -6247,12 +6351,7 @@ function getStandingsRoundLabel(competition, roundNumber) {
     const knockoutStart = leagueRounds + 1;
     if (round >= knockoutStart) {
       const offset = round - knockoutStart;
-      const ucl2Source = Boolean(state?.knockout?.ucl2Source || (competition === "Champions League" && isUcl2Enabled(state)));
-      const labels = (ucl2Source && competition !== "Champions League")
-        ? ["Quarter-finals", "Semi-finals", "Final"]
-        : (ucl2Source && competition === "Champions League" && getUcl2ChampionsQualifierCount(state) === 8)
-          ? ["Quarter-finals", "Semi-finals", "Final"]
-          : EURO_KNOCKOUT_STAGE_LABELS;
+      const labels = getEuropeanKnockoutStageLabelsForDatabase(competition, state);
       return labels[offset] || `Round ${round}`;
     }
   }
@@ -6269,18 +6368,19 @@ function hasRealTeamsForFixture(fixture) {
   return !isPlaceholderKnockoutTeam(fixture.home) && !isPlaceholderKnockoutTeam(fixture.away);
 }
 
-function decorateNamedRoundsWithMeta(rounds, competition, startRoundNumber = 1) {
+function decorateNamedRoundsWithMeta(rounds, competition, startRoundNumber = 1, stageLabels = []) {
   let fixtureCounter = 1;
+  const leagueRoundsCount = getLeagueStageRoundCount(competition, getCompetitionStandingsState(competition));
   return rounds.map((round, roundIndex) => {
     const roundNumber = startRoundNumber + roundIndex;
-    const stageLabel = getStandingsRoundLabel(competition, roundNumber);
+    const stageLabel = stageLabels[roundIndex] || getStandingsRoundLabel(competition, roundNumber);
     return round.map((match, matchIndex) => ({
       id: `${competition}__stage${roundNumber}__slot${matchIndex + 1}`,
       fixtureNumber: fixtureCounter++,
       roundNumber,
       stageLabel,
       slotKey: matchIndex + 1,
-      isKnockout: isEuropeanCompetitionWithKnockout(competition) && roundNumber >= 7,
+      isKnockout: isEuropeanCompetitionWithKnockout(competition) && roundNumber > leagueRoundsCount,
       home: match.home,
       away: match.away
     }));
@@ -6298,7 +6398,8 @@ function syncEuropeanKnockoutFixturesFromState(competition, state) {
       away: match.away
     }))
   );
-  state.fixtures = [...leagueRounds, ...decorateNamedRoundsWithMeta(knockoutRounds, competition, leagueRoundsCount + 1)];
+  const knockoutStageLabels = resolvedKnockoutRounds.map(round => round.label).filter(Boolean);
+  state.fixtures = [...leagueRounds, ...decorateNamedRoundsWithMeta(knockoutRounds, competition, leagueRoundsCount + 1, knockoutStageLabels)];
 }
 
 function generateDomesticFixtures(competition, withReturnRound = false) {
@@ -6450,16 +6551,45 @@ function generateDirectKnockoutPairs(teams) {
   return pairs;
 }
 
+function getSeededBracketSlotMap(pairCount) {
+  if (pairCount === 8) return [1, 8, 4, 5, 2, 7, 3, 6];
+  if (pairCount === 4) return [1, 4, 3, 2];
+  return Array.from({ length: pairCount }, (_, index) => index + 1);
+}
+
 function generateSeededKnockoutPairs(teams) {
   const orderedTeams = [...(teams || [])].filter(Boolean);
-  const pairs = [];
-  for (let i = 0; i < Math.floor(orderedTeams.length / 2); i++) {
-    pairs.push({
+  const pairCount = Math.floor(orderedTeams.length / 2);
+  const slotMap = getSeededBracketSlotMap(pairCount);
+  const pairs = new Array(pairCount);
+
+  for (let i = 0; i < pairCount; i++) {
+    const slotNumber = slotMap[i] || (i + 1);
+    pairs[slotNumber - 1] = {
       home: orderedTeams[i],
       away: orderedTeams[orderedTeams.length - 1 - i]
-    });
+    };
   }
-  return pairs;
+
+  return pairs.filter(Boolean);
+}
+
+function generateSeededPlaceholderKnockoutPairs(seedTeams, opponentLabels) {
+  const seeds = [...(seedTeams || [])].filter(Boolean);
+  const opponents = [...(opponentLabels || [])].filter(Boolean);
+  const pairCount = Math.min(seeds.length, opponents.length);
+  const slotMap = getSeededBracketSlotMap(pairCount);
+  const pairs = new Array(pairCount);
+
+  for (let i = 0; i < pairCount; i++) {
+    const slotNumber = slotMap[i] || (i + 1);
+    pairs[slotNumber - 1] = {
+      seeded: seeds[i],
+      opponent: opponents[pairCount - 1 - i] || "TBD"
+    };
+  }
+
+  return pairs.filter(Boolean);
 }
 
 function formatKnockoutPairsAsStrings(pairs) {
@@ -6586,10 +6716,10 @@ function generateUclKnockoutFromStandings(standings) {
     });
   }
 
-  const roundOf16 = playoffPairs.map((pair, index) => ({
-    seeded: top8[index],
-    opponent: `Winner of ${pair.home} vs ${pair.away}`
-  }));
+  const roundOf16 = generateSeededPlaceholderKnockoutPairs(
+    top8,
+    playoffPairs.map(pair => `Winner of ${pair.home} vs ${pair.away}`)
+  );
 
   const quarterFinals = [
     "Winner R16-1 vs Winner R16-2",
@@ -6634,10 +6764,10 @@ function generateUelKnockout(uclStandings, uelStandings) {
     });
   }
 
-  const roundOf16 = playoffPairs.map((pair, index) => ({
-    seeded: uelTop8[index],
-    opponent: `Winner of ${pair.home} vs ${pair.away}`
-  }));
+  const roundOf16 = generateSeededPlaceholderKnockoutPairs(
+    uelTop8,
+    playoffPairs.map(pair => `Winner of ${pair.home} vs ${pair.away}`)
+  );
 
   const quarterFinals = [
     "Winner R16-1 vs Winner R16-2",
@@ -8010,7 +8140,7 @@ function normalizePlayerSpreadsheetRow(row = {}) {
             return;
           }
 
-          const previousState = normalizeStandingsState(undoPayload.previousState || createEmptyStandingsState());
+          const previousState = normalizeStandingsState(undoPayload.previousState || createEmptyStandingsState(), undoPayload.competition);
           await setCompetitionStandingsState(undoPayload.competition, previousState);
 
           if (currentStandingsCompetition === undoPayload.competition) {
@@ -8946,12 +9076,12 @@ function isCombinedUcl2KnockoutStageView() {
   const state = getCompetitionStandingsState("Champions League");
   if (!isUcl2Enabled(state)) return false;
   const stageLabel = getSelectedKnockoutStageLabel("Champions League", state);
-  return Boolean(stageLabel && /Quarter-finals|Semi-finals|Final/i.test(stageLabel));
+  return Boolean(stageLabel && /Round of 16|Quarter-finals|Semi-finals|Final/i.test(stageLabel));
 }
 
 function getCombinedUcl2FixtureGroups() {
   const clState = getCompetitionStandingsState("Champions League");
-  const stageLabel = getSelectedKnockoutStageLabel("Champions League", clState);
+  const selectedStageLabel = getSelectedKnockoutStageLabel("Champions League", clState);
   const competitionMap = [
     ["Champions League", "Champions League"],
     ["Europa League", "Europa League"],
@@ -8963,11 +9093,15 @@ function getCombinedUcl2FixtureGroups() {
     const rounds = Array.isArray(state.fixtures) ? state.fixtures : [];
     let roundIndex = rounds.findIndex(round => {
       const fixture = (round || [])[0];
-      return (fixture?.stageLabel || "") === stageLabel;
+      return (fixture?.stageLabel || "") === selectedStageLabel;
     });
 
-    if (roundIndex < 0 && rounds.length) {
-      const allowedLabels = ["Quarter-finals", "Semi-finals", "Final"];
+    // If a UCL 2.0 downstream competition starts one stage earlier than the selected
+    // Champions League stage (for example Europa League Round of 16 while UCL starts
+    // at Quarter-finals), still show that downstream knockout block directly below
+    // the UCL fixtures instead of hiding it.
+    if (roundIndex < 0 && isUcl2DownstreamCompetition(competition, state)) {
+      const allowedLabels = ["Round of 16", "Quarter-finals", "Semi-finals", "Final"];
       roundIndex = rounds.findIndex(round => {
         const fixture = (round || [])[0];
         return allowedLabels.includes(fixture?.stageLabel || "");
@@ -8975,7 +9109,8 @@ function getCombinedUcl2FixtureGroups() {
     }
 
     const fixtures = roundIndex >= 0 ? (rounds[roundIndex] || []) : [];
-    return { competition, label, state, stageLabel, roundIndex, fixtures };
+    const groupStageLabel = fixtures[0]?.stageLabel || selectedStageLabel;
+    return { competition, label, state, stageLabel: groupStageLabel, roundIndex, fixtures };
   }).filter(group => group.fixtures.length > 0);
 }
 
@@ -13331,7 +13466,7 @@ async function applyForfeitResult() {
             knockout: row.knockout,
             viewerVisible: row.viewer_visible,
             participantTeams: row.participant_teams
-          });
+          }, competition);
           standingsDbCache[competition] = normalizedState;
           const table = buildStandingsTable(competition);
           const idx = table.findIndex(teamRow => normalizeTeamHubClubName(teamRow.team || "") === canonicalTeam);
