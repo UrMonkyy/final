@@ -4762,12 +4762,14 @@ async function saveEuropeanParticipantSelection(useDefault = false) {
   const previousUcl2Enabled = Boolean(state.knockout?.ucl2Enabled);
   const previousUcl2Qualifiers = Number(state.knockout?.ucl2ChampionsQualifiers || 8) === 16 ? 16 : 8;
   const previousUcl2DisableConferenceLeague = Boolean(state.knockout?.ucl2DisableConferenceLeague);
+  const previousUcl2EuropaRoundOf16 = Boolean(state.knockout?.ucl2EuropaRoundOf16);
 
   const participantSelectionChanged = !haveSameTeamSelection(previousTeams, uniqueTeams);
   const ucl2SettingChanged = competition === "Champions League" && (
     previousUcl2Enabled !== ucl2Enabled ||
     previousUcl2Qualifiers !== ucl2ChampionsQualifiers ||
-    previousUcl2DisableConferenceLeague !== ucl2DisableConferenceLeague
+    previousUcl2DisableConferenceLeague !== ucl2DisableConferenceLeague ||
+    previousUcl2EuropaRoundOf16 !== ucl2EuropaRoundOf16
   );
 
   state.participantTeams = uniqueTeams;
@@ -4775,7 +4777,8 @@ async function saveEuropeanParticipantSelection(useDefault = false) {
     ...(state.knockout || {}),
     ucl2Enabled: competition === "Champions League" ? ucl2Enabled : Boolean(state.knockout?.ucl2Enabled),
     ucl2ChampionsQualifiers: competition === "Champions League" ? ucl2ChampionsQualifiers : Number(state.knockout?.ucl2ChampionsQualifiers || 8),
-    ucl2DisableConferenceLeague: competition === "Champions League" ? ucl2DisableConferenceLeague : Boolean(state.knockout?.ucl2DisableConferenceLeague)
+    ucl2DisableConferenceLeague: competition === "Champions League" ? ucl2DisableConferenceLeague : Boolean(state.knockout?.ucl2DisableConferenceLeague),
+    ucl2EuropaRoundOf16: competition === "Champions League" ? ucl2EuropaRoundOf16 : Boolean(state.knockout?.ucl2EuropaRoundOf16)
   };
 
   if (participantSelectionChanged || ucl2SettingChanged) {
@@ -4784,7 +4787,6 @@ async function saveEuropeanParticipantSelection(useDefault = false) {
       ...(state.knockout || {}),
       ucl2Enabled: competition === "Champions League" ? ucl2Enabled : Boolean(state.knockout?.ucl2Enabled),
       ucl2ChampionsQualifiers: competition === "Champions League" ? ucl2ChampionsQualifiers : Number(state.knockout?.ucl2ChampionsQualifiers || 8),
-      uclLeagueStageGames: competition === "Champions League" ? uclLeagueStageGames : Number(state.knockout?.uclLeagueStageGames || 0),
       ucl2DisableConferenceLeague: competition === "Champions League" ? ucl2DisableConferenceLeague : Boolean(state.knockout?.ucl2DisableConferenceLeague),
       ucl2EuropaRoundOf16: competition === "Champions League" ? ucl2EuropaRoundOf16 : Boolean(state.knockout?.ucl2EuropaRoundOf16)
     };
