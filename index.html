@@ -9119,6 +9119,9 @@ function getCombinedUcl2FixtureGroups() {
 
   return competitionMap.map(([competition, label]) => {
     const state = getCompetitionStandingsState(competition);
+    if (isEuropeanCompetitionWithKnockout(competition) && state.knockout && Object.keys(state.knockout).length) {
+      syncEuropeanKnockoutFixturesFromState(competition, state);
+    }
     const rounds = Array.isArray(state.fixtures) ? state.fixtures : [];
     let roundIndex = rounds.findIndex(round => {
       const fixture = (round || [])[0];
@@ -9580,11 +9583,46 @@ function resolveKnockoutPlaceholderName(name, winnersMap) {
 function findKnockoutResultByTeams(state, homeTeam, awayTeam, stageCode = "", slotKey = "", competition = currentStandingsCompetition) {
   const canonicalCompetition = canonicalizeCompetitionName(competition);
   const roundNumber = getRoundNumberForStageCode(stageCode, canonicalCompetition);
+  const stageLabel = getEuropeanStageLabelFromCode(stageCode, canonicalCompetition, state);
+  const normalizedStageLabel = normalizeKnockoutWinnerLookupKey(stageLabel);
   const stableFixtureId = roundNumber && slotKey ? `${canonicalCompetition}__stage${roundNumber}__slot${slotKey}` : "";
-  return (state?.results || []).find(result =>
-    (stableFixtureId && result.fixtureId === stableFixtureId) ||
-    ((result.homeTeam === homeTeam && result.awayTeam === awayTeam) && Number(result.roundNumber || 0) === roundNumber)
-  ) || null;
+  const slotSuffix = slotKey ? `__slot${slotKey}` : "";
+
+  return (state?.results || []).find(result => {
+    const resultFixtureId = String(result?.fixtureId || "");
+    if (stableFixtureId && resultFixtureId === stableFixtureId) return true;
+
+    // UCL 2.0 downstream brackets have no league stage in Europa/Conference,
+    // and older saved results can contain either numeric runtime rounds or saved
+    // stage labels. Match by slot + stage as a fallback so placeholders advance
+    // correctly after results are entered.
+    if (slotSuffix && resultFixtureId.endsWith(slotSuffix)) {
+      const resultStageMatches =
+        Number(result?.roundNumber || 0) === roundNumber ||
+        normalizeKnockoutWinnerLookupKey(result?.roundNumber) === normalizedStageLabel ||
+        normalizeKnockoutWinnerLookupKey(result?.stageLabel) === normalizedStageLabel;
+      if (resultStageMatches) return true;
+    }
+
+    const teamsMatch = result?.homeTeam === homeTeam && result?.awayTeam === awayTeam;
+    if (!teamsMatch) return false;
+
+    return (
+      Number(result?.roundNumber || 0) === roundNumber ||
+      normalizeKnockoutWinnerLookupKey(result?.roundNumber) === normalizedStageLabel ||
+      normalizeKnockoutWinnerLookupKey(result?.stageLabel) === normalizedStageLabel
+    );
+  }) || null;
+}
+
+function getEuropeanStageLabelFromCode(stageCode, competition = currentStandingsCompetition, state = getCompetitionStandingsState(competition)) {
+  const code = String(stageCode || "").toUpperCase();
+  const labels = getEuropeanKnockoutStageLabelsForDatabase(competition, state);
+  const codes = getEuropeanKnockoutStageCodesForDatabase(competition, state);
+  const index = codes.findIndex(item => item === code);
+  if (index >= 0) return labels[index] || "";
+  const fallback = { PO: "Play-offs", R16: "Round of 16", QF: "Quarter-finals", SF: "Semi-finals", F: "Final", FR: "First Round" };
+  return fallback[code] || "";
 }
 
 function getRoundNumberForStageCode(stageCode, competition = currentStandingsCompetition) {
