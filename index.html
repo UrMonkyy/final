@@ -2604,6 +2604,31 @@
       text-overflow: ellipsis;
     }
 
+    .stats-player-display {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+    }
+
+    .stats-player-display .roblox-user-wrap {
+      max-width: 180px;
+    }
+
+    .stats-player-alias {
+      color: var(--muted);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .bw-user-avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      border-radius: 50%;
+    }
+
 </style>
 </head>
 <body>
@@ -2611,7 +2636,7 @@
   <nav id="topQuickNav" class="top-quick-nav" aria-label="Quick navigation top bar">
     <div class="top-quick-nav-user" aria-label="Current user status">
       <div class="bw-user-badge top-user-badge">
-        <div class="bw-user-avatar">U</div>
+        <div id="topCurrentUserAvatar" class="bw-user-avatar">U</div>
         <div class="bw-user-copy">
           <small>Current user</small>
           <strong id="homeUserPill">User: Guest</strong>
@@ -9410,6 +9435,7 @@ const budgetTransferInputCard = document.getElementById("budgetTransferInputCard
 const budgetViewerNotice = document.getElementById("budgetViewerNotice");
 if (budgetTransferInputCard) budgetTransferInputCard.classList.toggle("hidden", !canManageStandings());
 if (budgetViewerNotice) budgetViewerNotice.classList.toggle("hidden", canManageStandings());
+      hydrateCurrentUserAvatar();
     }
 
     function openAuthModal(tab = "login") {
@@ -12132,6 +12158,11 @@ ${detail}`);
         return;
       }
 
+      const verificationRows = await fetchAllPlayerSpreadsheetRows().catch(error => {
+        console.warn("Could not load Roblox verification rows for stats avatars:", error);
+        return [];
+      });
+
       const playerMap = {};
       const searchTerm = getCompetitionSearchTerm();
 
@@ -12144,12 +12175,17 @@ ${detail}`);
         if (!playerMap[key]) {
           playerMap[key] = {
             displayName: row.player,
+            robloxUsername: findVerifiedRobloxUsernameForName(row.player || "", verificationRows),
             goals: 0,
             assists: 0,
             clubs: new Set(),
             latestMatchday: row.matchday || "",
             latestMatchdayNumber: rowMatchdayNumber
           };
+        }
+
+        if (!playerMap[key].robloxUsername) {
+          playerMap[key].robloxUsername = findVerifiedRobloxUsernameForName(row.player || "", verificationRows);
         }
 
         playerMap[key].goals += Number(row.goals || 0);
@@ -12187,13 +12223,13 @@ ${detail}`);
         goalPlayers.forEach((player, index) => {
           const clubs = [...player.clubs];
 
-          let clubCells = clubs.map(club => `<td class="club-cell">${escapeHtml(club)}</td>`).join("");
+          let clubCells = clubs.map(club => `<td class="club-cell">${renderPlayerClubCell(club)}</td>`).join("");
           for (let i = clubs.length; i < maxGoalClubs; i++) clubCells += `<td></td>`;
 
           goalsBody.innerHTML += `
             <tr>
               <td>${index + 1}.</td>
-              <td>${escapeHtml(player.displayName)}</td>
+              <td class="roblox-player-cell">${renderStatsPlayerCell(player.displayName, player.robloxUsername)}</td>
               <td>${player.goals}</td>
               <td>${escapeHtml(player.latestMatchday)}</td>
               ${clubCells}
@@ -12208,13 +12244,13 @@ ${detail}`);
         assistPlayers.forEach((player, index) => {
           const clubs = [...player.clubs];
 
-          let clubCells = clubs.map(club => `<td class="club-cell">${escapeHtml(club)}</td>`).join("");
+          let clubCells = clubs.map(club => `<td class="club-cell">${renderPlayerClubCell(club)}</td>`).join("");
           for (let i = clubs.length; i < maxAssistClubs; i++) clubCells += `<td></td>`;
 
           assistsBody.innerHTML += `
             <tr>
               <td>${index + 1}.</td>
-              <td>${escapeHtml(player.displayName)}</td>
+              <td class="roblox-player-cell">${renderStatsPlayerCell(player.displayName, player.robloxUsername)}</td>
               <td>${player.assists}</td>
               <td>${escapeHtml(player.latestMatchday)}</td>
               ${clubCells}
@@ -12222,6 +12258,9 @@ ${detail}`);
           `;
         });
       }
+
+      hydrateRobloxHeadshots(goalsBody);
+      hydrateRobloxHeadshots(assistsBody);
     }
 
     function buildEloRatingsFromResults(results = [], teamPool = []) {
@@ -12468,7 +12507,7 @@ ${detail}`);
       }
     }
 
-    function renderGlobalStatsPair(goalsBodyId, assistsBodyId, rows, searchTerm) {
+    function renderGlobalStatsPair(goalsBodyId, assistsBodyId, rows, searchTerm, verificationRows = []) {
       const globalGoalsBody = document.getElementById(goalsBodyId);
       const globalAssistsBody = document.getElementById(assistsBodyId);
       if (!globalGoalsBody || !globalAssistsBody) return;
@@ -12485,9 +12524,14 @@ ${detail}`);
         if (!playerMap[key]) {
           playerMap[key] = {
             displayName: row.player,
+            robloxUsername: findVerifiedRobloxUsernameForName(row.player || "", verificationRows),
             goals: 0,
             assists: 0
           };
+        }
+
+        if (!playerMap[key].robloxUsername) {
+          playerMap[key].robloxUsername = findVerifiedRobloxUsernameForName(row.player || "", verificationRows);
         }
 
         playerMap[key].goals += Number(row.goals || 0);
@@ -12513,7 +12557,7 @@ ${detail}`);
           globalGoalsBody.innerHTML += `
             <tr>
               <td>${index + 1}.</td>
-              <td>${escapeHtml(player.displayName)}</td>
+              <td class="roblox-player-cell">${renderStatsPlayerCell(player.displayName, player.robloxUsername)}</td>
               <td>${player.goals}</td>
             </tr>
           `;
@@ -12527,12 +12571,15 @@ ${detail}`);
           globalAssistsBody.innerHTML += `
             <tr>
               <td>${index + 1}.</td>
-              <td>${escapeHtml(player.displayName)}</td>
+              <td class="roblox-player-cell">${renderStatsPlayerCell(player.displayName, player.robloxUsername)}</td>
               <td>${player.assists}</td>
             </tr>
           `;
         });
       }
+
+      hydrateRobloxHeadshots(globalGoalsBody);
+      hydrateRobloxHeadshots(globalAssistsBody);
     }
 
     async function renderGlobalTables() {
@@ -12553,8 +12600,13 @@ ${detail}`);
         return;
       }
 
-      renderGlobalStatsPair("globalGoalsBody", "globalAssistsBody", data || [], getHomeSearchTerm());
-      renderGlobalStatsPair("globalPageGoalsBody", "globalPageAssistsBody", data || [], getGlobalPageSearchTerm());
+      const verificationRows = await fetchAllPlayerSpreadsheetRows().catch(error => {
+        console.warn("Could not load Roblox verification rows for global stats avatars:", error);
+        return [];
+      });
+
+      renderGlobalStatsPair("globalGoalsBody", "globalAssistsBody", data || [], getHomeSearchTerm(), verificationRows);
+      renderGlobalStatsPair("globalPageGoalsBody", "globalPageAssistsBody", data || [], getGlobalPageSearchTerm(), verificationRows);
     }
 
     async function clearCompetitionStats() {
@@ -12657,6 +12709,22 @@ ${detail}`);
       `).join("");
     }
 
+    function renderDraggableTeam(team, draggableValue = "true") {
+      const safeTeam = escapeHtml(team || "");
+      const safeDraggable = String(draggableValue) === "true" ? "true" : "false";
+      return `
+        <div
+          class="draggable-team"
+          draggable="${safeDraggable}"
+          data-team="${safeTeam}"
+          ondragstart="handleTeamDragStart(event)"
+          ondragend="handleTeamDragEnd(event)"
+        >
+          ${renderTeamWithLogo(team)}
+        </div>
+      `;
+    }
+
     function renderDrawState() {
       const stagePill = document.getElementById("drawStagePill");
       const remainingPill = document.getElementById("drawRemainingPill");
@@ -12689,17 +12757,7 @@ ${detail}`);
         empty.classList.remove("hidden");
       } else {
         empty.classList.add("hidden");
-        board.innerHTML = unplacedTeams.map(team => `
-          <div
-            class="draggable-team"
-            draggable="true"
-            data-team="${escapeHtml(team)}"
-            ondragstart="handleTeamDragStart(event)"
-            ondragend="handleTeamDragEnd(event)"
-          >
-            ${escapeHtml(team)}
-          </div>
-        `).join("");
+        board.innerHTML = unplacedTeams.map(team => renderDraggableTeam(team, "true")).join("");
       }
 
       renderDrawLayout(drawFormat);
@@ -12741,7 +12799,7 @@ ${detail}`);
                  ondragleave="handleSlotDragLeave(event)"
                  ondrop="handleTeamDrop(event, 'fixture', ${matchIndex}, 0)">
               ${match[0]
-                ? `<div class="draggable-team" draggable="${draggableValue}" data-team="${escapeHtml(match[0])}" ondragstart="handleTeamDragStart(event)" ondragend="handleTeamDragEnd(event)">${escapeHtml(match[0])}</div>`
+                ? `${renderDraggableTeam(match[0], draggableValue)}`
                 : `<span class="slot-placeholder">Drop team here</span>`}
             </div>
 
@@ -12750,7 +12808,7 @@ ${detail}`);
                  ondragleave="handleSlotDragLeave(event)"
                  ondrop="handleTeamDrop(event, 'fixture', ${matchIndex}, 1)">
               ${match[1]
-                ? `<div class="draggable-team" draggable="${draggableValue}" data-team="${escapeHtml(match[1])}" ondragstart="handleTeamDragStart(event)" ondragend="handleTeamDragEnd(event)">${escapeHtml(match[1])}</div>`
+                ? `${renderDraggableTeam(match[1], draggableValue)}`
                 : `<span class="slot-placeholder">Drop team here</span>`}
             </div>
 
@@ -12811,7 +12869,7 @@ ${detail}`);
                    ondragleave="handleSlotDragLeave(event)"
                    ondrop="handleTeamDrop(event, 'group', ${groupIndex}, ${slotIndex})">
                 ${team
-                  ? `<div class="draggable-team" draggable="${draggableValue}" data-team="${escapeHtml(team)}" ondragstart="handleTeamDragStart(event)" ondragend="handleTeamDragEnd(event)">${escapeHtml(team)}</div>`
+                  ? `${renderDraggableTeam(team, draggableValue)}`
                   : `<span class="slot-placeholder">Drop team here</span>`}
               </div>
             `).join("")}
@@ -13252,6 +13310,78 @@ ${detail}`);
           <span class="roblox-name-text">${escapeHtml(cleanName)}</span>
         </span>
       `;
+    }
+
+
+    function normalizeVerifiedIdentity(value = "") {
+      return String(value || "")
+        .trim()
+        .toLowerCase()
+        .replace(/^@+/, "")
+        .replace(/[<@!>]/g, "")
+        .replace(/#\d{4}$/, "")
+        .replace(/\s+/g, " ");
+    }
+
+    function findVerifiedRobloxUsernameForName(name = "", verificationRows = []) {
+      const target = normalizeVerifiedIdentity(name);
+      if (!target) return "";
+
+      for (const row of verificationRows || []) {
+        const robloxUsername = String(row && row.roblox_username ? row.roblox_username : "").trim();
+        if (!robloxUsername) continue;
+
+        const robloxIdentity = normalizeVerifiedIdentity(robloxUsername);
+        const discordIdentity = normalizeVerifiedIdentity(row && row.discord_tag ? row.discord_tag : "");
+        const discordBaseIdentity = normalizeVerifiedIdentity(String(row && row.discord_tag ? row.discord_tag : "").split("#")[0]);
+
+        if (target === robloxIdentity || target === discordIdentity || target === discordBaseIdentity) {
+          return robloxUsername;
+        }
+      }
+
+      return "";
+    }
+
+    function renderStatsPlayerCell(displayName = "", robloxUsername = "") {
+      const cleanDisplayName = String(displayName || "").trim() || "-";
+      const cleanRobloxUsername = String(robloxUsername || "").trim() || cleanDisplayName;
+      const showAlias = normalizeVerifiedIdentity(cleanDisplayName) !== normalizeVerifiedIdentity(cleanRobloxUsername);
+
+      return `
+        <span class="stats-player-display">
+          ${renderRobloxUsernameCell(cleanRobloxUsername)}
+          ${showAlias ? `<span class="stats-player-alias">${escapeHtml(cleanDisplayName)}</span>` : ""}
+        </span>
+      `;
+    }
+
+    async function hydrateCurrentUserAvatar() {
+      const avatarEl = document.getElementById("topCurrentUserAvatar");
+      if (!avatarEl) return;
+
+      const username = currentUser ? String(currentUser.username || "").trim() : "";
+      if (!username) {
+        avatarEl.removeAttribute("data-roblox-avatar");
+        avatarEl.textContent = "U";
+        avatarEl.title = "Guest";
+        return;
+      }
+
+      avatarEl.textContent = username.charAt(0).toUpperCase() || "U";
+      avatarEl.title = username;
+
+      try {
+        const verificationRows = await fetchAllPlayerSpreadsheetRows();
+        const robloxUsername = findVerifiedRobloxUsernameForName(username, verificationRows);
+        if (!robloxUsername) return;
+
+        avatarEl.setAttribute("data-roblox-avatar", robloxUsername);
+        avatarEl.textContent = robloxUsername.charAt(0).toUpperCase() || username.charAt(0).toUpperCase() || "U";
+        await hydrateRobloxHeadshots(avatarEl.parentElement || document);
+      } catch (error) {
+        console.warn("Could not hydrate current user Roblox avatar:", error);
+      }
     }
 
     async function loadRobloxHeadshotsForUsernames(usernames = []) {
