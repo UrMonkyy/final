@@ -361,7 +361,8 @@
 
     .theme-toggle {
       position: fixed;
-      right: 18px;
+      left: 18px;
+      right: auto;
       bottom: 18px;
       z-index: 1200;
       background: #343a40;
@@ -1232,7 +1233,8 @@
       }
 
       .theme-toggle {
-        right: 12px;
+        left: 12px;
+        right: auto;
         bottom: 12px;
         width: auto;
       }
@@ -2548,7 +2550,8 @@
     .theme-toggle:hover,
     .theme-toggle:active {
       position: fixed;
-      right: 18px;
+      left: 18px;
+      right: auto;
       bottom: 18px;
       z-index: 1800;
     }
@@ -2559,6 +2562,46 @@
 
     .theme-toggle:active {
       transform: scale(0.98);
+    }
+
+    .roblox-player-cell {
+      min-width: 190px;
+    }
+
+    .roblox-user-wrap {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+    }
+
+    .roblox-avatar {
+      width: 30px;
+      height: 30px;
+      border-radius: 999px;
+      flex-shrink: 0;
+      display: inline-grid;
+      place-items: center;
+      overflow: hidden;
+      background: linear-gradient(180deg, var(--accent-soft), rgba(255,255,255,0.02));
+      border: 1px solid var(--accent-border);
+      color: var(--text);
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+
+    .roblox-avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .roblox-name-text {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
 </style>
@@ -4204,6 +4247,7 @@
     const PLAYER_APPLICATIONS_TABLE = "player_applications";
     const PLAYER_SPREADSHEET_TABLE = "player_spreadsheet";
     const ROBLOX_VERIFICATIONS_TABLE = "roblox_verifications";
+    const ROBLOX_AVATAR_FUNCTION_NAME = "roblox-avatar";
     const STANDINGS_TABLE = "standings_state";
     const TRANSFERS_TABLE = "transfers";
 
@@ -13183,6 +13227,96 @@ ${detail}`);
       rows: null,
       loadedAt: 0
     };
+    const robloxHeadshotCache = new Map();
+    const robloxUserIdCache = new Map();
+
+    function normalizeRobloxLookupName(username = "") {
+      return String(username || "").trim().toLowerCase();
+    }
+
+    function buildRobloxAvatarFallback(username = "") {
+      const cleanName = String(username || "").trim();
+      const initial = cleanName ? cleanName.charAt(0).toUpperCase() : "?";
+      return `<span class="roblox-avatar" title="Roblox headshot unavailable">${escapeHtml(initial)}</span>`;
+    }
+
+    function renderRobloxUsernameCell(username = "") {
+      const cleanName = String(username || "").trim();
+      if (!cleanName) {
+        return `<span class="roblox-user-wrap"><span class="roblox-avatar">?</span><span class="roblox-name-text">-</span></span>`;
+      }
+
+      return `
+        <span class="roblox-user-wrap">
+          <span class="roblox-avatar" data-roblox-avatar="${escapeHtml(cleanName)}">${escapeHtml(cleanName.charAt(0).toUpperCase())}</span>
+          <span class="roblox-name-text">${escapeHtml(cleanName)}</span>
+        </span>
+      `;
+    }
+
+    async function loadRobloxHeadshotsForUsernames(usernames = []) {
+      const uniqueNames = [...new Set((usernames || [])
+        .map(name => String(name || "").trim())
+        .filter(Boolean))];
+      const missingNames = uniqueNames.filter(name => !robloxHeadshotCache.has(normalizeRobloxLookupName(name)));
+      if (!missingNames.length) return;
+
+      try {
+        for (let i = 0; i < missingNames.length; i += 50) {
+          const nameBatch = missingNames.slice(i, i + 50);
+          const { data, error } = await supabaseClient.functions.invoke(ROBLOX_AVATAR_FUNCTION_NAME, {
+            body: { usernames: nameBatch }
+          });
+
+          if (error) throw error;
+
+          const avatars = Array.isArray(data && data.avatars) ? data.avatars : [];
+          avatars.forEach(item => {
+            const cacheName = normalizeRobloxLookupName(item && item.username ? item.username : "");
+            if (!cacheName) return;
+            if (item && item.userId) robloxUserIdCache.set(cacheName, Number(item.userId));
+            robloxHeadshotCache.set(cacheName, item && item.avatarUrl ? String(item.avatarUrl) : "");
+          });
+
+          nameBatch.forEach(name => {
+            const key = normalizeRobloxLookupName(name);
+            if (!robloxHeadshotCache.has(key)) robloxHeadshotCache.set(key, "");
+          });
+        }
+      } catch (error) {
+        console.warn("Could not load Roblox headshots through Supabase Edge Function:", error);
+        missingNames.forEach(name => robloxHeadshotCache.set(normalizeRobloxLookupName(name), ""));
+      }
+    }
+
+    async function hydrateRobloxHeadshots(scope = document) {
+      const nodes = Array.from((scope || document).querySelectorAll("[data-roblox-avatar]"));
+      const usernames = nodes.map(node => node.getAttribute("data-roblox-avatar") || "").filter(Boolean);
+      if (!usernames.length) return;
+
+      await loadRobloxHeadshotsForUsernames(usernames);
+      nodes.forEach(node => {
+        const username = node.getAttribute("data-roblox-avatar") || "";
+        const imageUrl = robloxHeadshotCache.get(normalizeRobloxLookupName(username));
+        if (imageUrl) {
+          const img = document.createElement("img");
+          img.src = imageUrl;
+          img.alt = `${username} Roblox headshot`;
+          img.loading = "lazy";
+          img.decoding = "async";
+          img.onerror = () => {
+            node.textContent = String(username || "?").trim().charAt(0).toUpperCase() || "?";
+            node.title = "Roblox headshot unavailable";
+          };
+          node.textContent = "";
+          node.appendChild(img);
+          node.title = `${username} Roblox headshot`;
+        } else {
+          node.textContent = String(username || "?").trim().charAt(0).toUpperCase() || "?";
+          node.title = "Roblox headshot unavailable";
+        }
+      });
+    }
 
     function invalidatePlayerSpreadsheetCache() {
       playerSpreadsheetDatasetCache.rows = null;
@@ -13422,10 +13556,10 @@ ${detail}`);
             </tr>
             <tr class="rank-section-header-row">
               <th>Rank</th>
-              <th>Nation</th>
-              <th>Club</th>
-              <th>Discord Username</th>
               <th>Roblox Username</th>
+              <th>Club</th>
+              <th>Nation</th>
+              <th>Discord Username</th>
             </tr>`
             : "";
           previousTier = currentTier;
@@ -13433,12 +13567,13 @@ ${detail}`);
           return `${separator}
           <tr>
             <td>${escapeHtml(row.rank)}</td>
-            <td>${renderNationWithFlag(row.nation)}</td>
+            <td class="roblox-player-cell">${renderRobloxUsernameCell(row.roblox_username)}</td>
             <td>${renderPlayerClubCell(row.club)}</td>
+            <td>${renderNationWithFlag(row.nation)}</td>
             <td>${escapeHtml(row.discord_tag || "-")}</td>
-            <td>${escapeHtml(row.roblox_username || "-")}</td>
           </tr>`;
         }).join("");
+        hydrateRobloxHeadshots(body);
       } catch (error) {
         console.error("Player spreadsheet render failed:", error, data);
         body.innerHTML = `<tr><td colspan="5" class="empty">The player data loaded, but one or more rows could not be displayed. This version skips malformed values more safely.</td></tr>`;
@@ -14209,9 +14344,10 @@ async function applyForfeitResult() {
               <td>${escapeHtml(player.rank || "unranked")}</td>
               <td>${renderNationWithFlag(player.nation)}</td>
               <td>${escapeHtml(player.discord_tag || "-")}</td>
-              <td>${escapeHtml(player.roblox_username || "-")}</td>
+              <td class="roblox-player-cell">${renderRobloxUsernameCell(player.roblox_username)}</td>
             </tr>
           `).join("");
+          hydrateRobloxHeadshots(squadBody);
         }
 
         const statsRows = Array.isArray(statsResponse.data) ? statsResponse.data : [];
