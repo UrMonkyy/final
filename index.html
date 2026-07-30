@@ -2543,6 +2543,24 @@
       transform: scale(1.18);
     }
 
+    /* Keep the fixed theme slider stable while global button hover scaling is active. */
+    .theme-toggle,
+    .theme-toggle:hover,
+    .theme-toggle:active {
+      position: fixed;
+      right: 18px;
+      bottom: 18px;
+      z-index: 1800;
+    }
+
+    .theme-toggle:hover {
+      transform: scale(1.08);
+    }
+
+    .theme-toggle:active {
+      transform: scale(0.98);
+    }
+
 </style>
 </head>
 <body>
