@@ -2137,69 +2137,522 @@
       filter: drop-shadow(0 16px 28px rgba(0,0,0,0.32));
     }
 
+
+
+    /* ===== Roblox-style always-open top navigation ===== */
+    .top-quick-nav {
+      position: fixed;
+      top: 12px;
+      left: 50%;
+      right: auto;
+      width: min(1600px, 96vw);
+      z-index: 1500;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 10px 14px;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.035), rgba(255,255,255,0.012)),
+        rgba(8,8,8,0.94);
+      border: 1px solid var(--accent-border);
+      border-radius: 22px;
+      box-shadow: 0 14px 34px rgba(0,0,0,0.34);
+      backdrop-filter: blur(14px);
+      transform: translateX(-50%);
+    }
+
+    .top-quick-nav-user {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-width: max-content;
+      color: var(--text);
+    }
+
+    .top-user-badge {
+      min-height: 42px;
+      padding-top: 5px;
+      padding-bottom: 5px;
+    }
+
+    .top-mini-stat {
+      min-height: 42px;
+      padding: 6px 10px;
+      border-radius: 999px;
+    }
+
+    .top-quick-nav-mark {
+      width: 34px;
+      height: 34px;
+      display: grid;
+      place-items: center;
+      border-radius: 12px;
+      background: var(--accent);
+      color: #090909;
+      font-weight: 900;
+    }
+
+    .top-quick-nav-menu {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex: 1;
+      overflow: visible;
+    }
+
+    .top-quick-nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: max-content;
+    }
+
+    .top-nav-item {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+    }
+
+    .top-nav-button {
+      width: auto;
+      min-width: 0;
+      padding: 9px 12px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .top-quick-nav-actions button {
+      width: auto;
+      min-width: 0;
+      white-space: nowrap;
+    }
+
+    .top-nav-dropdown {
+      position: absolute;
+      top: calc(100% + 10px);
+      left: 50%;
+      width: max-content;
+      min-width: 240px;
+      max-width: min(420px, 92vw);
+      max-height: min(72vh, 620px);
+      overflow-y: auto;
+      padding: 12px;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+      border-radius: 18px;
+      background: rgba(8,8,8,0.98);
+      border: 1px solid var(--accent-border);
+      box-shadow: var(--shadow);
+      opacity: 0;
+      transform: translate(-50%, -8px);
+      pointer-events: none;
+      transition: opacity 0.18s ease, transform 0.18s ease;
+    }
+
+    .top-nav-dropdown::before {
+      content: '';
+      position: absolute;
+      left: -12px;
+      right: -12px;
+      top: -28px;
+      height: 28px;
+      background: transparent;
+    }
+
+    .top-nav-item:hover .top-nav-dropdown,
+    .top-nav-item:focus-within .top-nav-dropdown,
+    .top-nav-item.top-nav-open .top-nav-dropdown {
+      opacity: 1;
+      transform: translate(-50%, 0);
+      pointer-events: auto;
+    }
+
+    .top-nav-dropdown-title {
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 2px 4px 4px;
+    }
+
+    .top-nav-dropdown button {
+      width: 100%;
+      text-align: left;
+      padding: 10px 12px;
+      border-radius: 12px;
+      font-size: 14px;
+    }
+
+    .top-nav-dropdown-wide {
+      grid-template-columns: repeat(2, minmax(170px, 1fr));
+      min-width: min(520px, 92vw);
+    }
+
+    .top-nav-dropdown-wide .top-nav-dropdown-title {
+      grid-column: 1 / -1;
+    }
+
+    .top-quick-nav .bw-user-badge,
+    .top-quick-nav .bw-mini-stat {
+      margin: 0;
+      flex-shrink: 0;
+    }
+
+    .top-quick-nav-menu::-webkit-scrollbar {
+      height: 6px;
+    }
+
+    .top-quick-nav-menu::-webkit-scrollbar-thumb {
+      background: rgba(255,255,255,0.18);
+      border-radius: 999px;
+    }
+
+    .page {
+      padding-top: 86px;
+    }
+
+    @media (max-width: 1120px) {
+      .top-quick-nav {
+        align-items: flex-start;
+        flex-wrap: wrap;
+      }
+
+      .top-quick-nav-menu {
+        order: 3;
+        width: 100%;
+        overflow-x: auto;
+        overflow-y: visible;
+        padding-bottom: 4px;
+      }
+
+      .page {
+        padding-top: 132px;
+      }
+    }
+
+    @media (max-width: 720px) {
+      .top-quick-nav {
+        padding: 8px 10px;
+      }
+
+      .top-mini-stat {
+        display: none;
+      }
+
+      .top-quick-nav-actions {
+        flex-wrap: wrap;
+        justify-content: flex-end;
+      }
+
+      .top-nav-dropdown,
+      .top-nav-dropdown-wide {
+        left: 0;
+        transform: translate(0, -8px);
+        min-width: min(320px, 88vw);
+        grid-template-columns: 1fr;
+      }
+
+      .top-nav-item:hover .top-nav-dropdown,
+      .top-nav-item:focus-within .top-nav-dropdown,
+      .top-nav-item.top-nav-open .top-nav-dropdown {
+        transform: translate(0, 0);
+      }
+
+      .page {
+        padding-top: 150px;
+      }
+    }
+
+    /* ===== Stats quick access + read-only stats adjustments ===== */
+    .stats-quick-wrap {
+      position: relative;
+      display: inline-block;
+      width: fit-content;
+      margin-top: auto;
+    }
+
+    .stats-quick-wrap > button {
+      width: fit-content;
+    }
+
+    .stats-quick-wrap::after {
+      content: '';
+      position: absolute;
+      top: -210px;
+      left: 100%;
+      width: 48px;
+      height: calc(100% + 420px);
+      background: transparent;
+      pointer-events: auto;
+    }
+
+    .stats-quick-popup {
+      position: absolute;
+      left: calc(100% + 4px);
+      top: 50%;
+      bottom: auto;
+      min-width: 280px;
+      max-height: min(82vh, 560px);
+      overflow-y: auto;
+      padding: 12px;
+      border-radius: 18px;
+      background: rgba(8,8,8,0.98);
+      border: 1px solid var(--accent-border);
+      box-shadow: var(--shadow);
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+      opacity: 0;
+      transform: translate(-6px, -50%);
+      pointer-events: none;
+      transition: opacity 0.18s ease, transform 0.18s ease;
+      z-index: 1250;
+    }
+
+    .stats-quick-wrap.stats-quick-open .stats-quick-popup,
+    .stats-quick-popup:hover,
+    .stats-quick-wrap:focus-within .stats-quick-popup {
+      opacity: 1;
+      transform: translate(0, -50%);
+      pointer-events: auto;
+    }
+
+    .stats-quick-wrap.stats-quick-wrap-bottom-connected .stats-quick-popup {
+      top: auto;
+      bottom: 0;
+      transform: translate(-6px, 0);
+    }
+
+    .stats-quick-wrap.stats-quick-wrap-bottom-connected.stats-quick-open .stats-quick-popup,
+    .stats-quick-wrap.stats-quick-wrap-bottom-connected .stats-quick-popup:hover,
+    .stats-quick-wrap.stats-quick-wrap-bottom-connected:focus-within .stats-quick-popup {
+      transform: translate(0, 0);
+    }
+
+
+    .stats-quick-popup::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -44px;
+      width: 44px;
+      height: 100%;
+      background: transparent;
+    }
+
+    .stats-quick-popup::after {
+      content: '';
+      position: absolute;
+      left: -8px;
+      top: 50%;
+      width: 14px;
+      height: 14px;
+      background: rgba(8,8,8,0.98);
+      border-left: 1px solid var(--accent-border);
+      border-bottom: 1px solid var(--accent-border);
+      transform: translateY(-50%) rotate(45deg);
+    }
+
+
+    .stats-quick-wrap.stats-quick-wrap-bottom-connected .stats-quick-popup::before {
+      top: 0;
+      height: 100%;
+    }
+
+    .stats-quick-wrap.stats-quick-wrap-bottom-connected .stats-quick-popup::after {
+      top: auto;
+      bottom: 16px;
+      transform: rotate(45deg);
+    }
+
+    .stats-quick-popup-title {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 2px 4px 4px;
+    }
+
+    .stats-quick-popup button,
+    .bw-action-grid-expanded .bw-action-tile .stats-quick-popup button {
+      width: 100%;
+      margin-top: 0;
+      text-align: left;
+      padding: 10px 12px;
+      border-radius: 12px;
+      font-size: 14px;
+    }
+
+    .stats-tab-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin: 16px 0 12px;
+    }
+
+    .read-only-note {
+      max-width: 760px;
+      margin: 0 auto 18px;
+      text-align: center;
+    }
+
+    @media (max-width: 680px) {
+      .stats-quick-wrap,
+      .stats-quick-wrap > button {
+        width: 100%;
+      }
+
+      .stats-quick-popup {
+        position: static;
+        min-width: 0;
+        max-height: none;
+        margin-top: 10px;
+        opacity: 1;
+        transform: none;
+        pointer-events: auto;
+      }
+
+      .stats-quick-wrap::after,
+      .stats-quick-popup::before,
+      .stats-quick-popup::after {
+        display: none;
+      }
+    }
+
+    /* ===== Quality of life hover animation ===== */
+    button {
+      transform-origin: center;
+      will-change: transform;
+      transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease, transform 0.18s ease !important;
+    }
+
+    button:hover {
+      transform: scale(1.12);
+      position: relative;
+      z-index: 20;
+    }
+
+    button:active {
+      transform: scale(1.18);
+    }
+
 </style>
 </head>
 <body>
 <div class="app-shell">
-  <button id="sidebarToggleBtn" class="sidebar-toggle" type="button" aria-label="Open navigation menu" onclick="toggleSidebar()">☰</button>
-  <div id="sidebarBackdrop" class="sidebar-backdrop" onclick="closeSidebar()"></div>
-  <aside id="quickSidebar" class="quick-sidebar" aria-label="Quick navigation sidebar">
-    <div class="sidebar-header">
-      <h3 class="sidebar-title">Quick Navigation</h3>
-      <button class="sidebar-close-btn" type="button" onclick="closeSidebar()">✕</button>
-    </div>
-    <span class="pill sidebar-user-chip" id="sidebarUserPill">User: Guest</span>
-
-    <div class="sidebar-section-label">Navigate</div>
-    <div class="sidebar-nav">
-      <button type="button" onclick="navigateFromSidebar(openFrontPage)">Home</button>
-      <button type="button" onclick="navigateFromSidebar(openStatsHome)">Stats Sheets</button>
-      <button type="button" onclick="navigateFromSidebar(openStandingsHome)">Standings Hub</button>
-      <button type="button" onclick="navigateFromSidebar(openDrawHome)">Live Draws</button>
-      <button type="button" onclick="navigateFromSidebar(openPlayerHub)">Players</button>
-      <button type="button" onclick="navigateFromSidebar(openLeagueStatisticsPage)">League Statistics</button>
-      <button type="button" onclick="navigateFromSidebar(openTeamHubPage)">Team Hub</button>
-      <button type="button" onclick="navigateFromSidebar(openRulesPage)">Rules</button>
-      <button id="sidebarOwnerAdminBtn" class="secondary-btn hidden" type="button" onclick="navigateFromSidebar(openAdminPage)">Owner Admin Panel</button>
-      <button id="sidebarAdminDashboardBtn" class="purple-btn hidden" type="button" onclick="navigateFromSidebar(openAdminDashboardPage)">Admin Dashboard</button>
-    </div>
-
-    <div class="sidebar-section-label">Account</div>
-    <div class="sidebar-auth-row">
-      <button id="sidebarLoginBtn" class="top-auth-btn" type="button" onclick="closeSidebar(); openAuthModal('login')">Login</button>
-      <button id="sidebarSignupBtn" class="top-auth-btn" type="button" onclick="closeSidebar(); openAuthModal('signup')">Sign Up</button>
-      <button id="sidebarLogoutBtn" class="logout-btn hidden" type="button" onclick="closeSidebar(); logout()">Logout</button>
-    </div>
-  </aside>
-
-  <section id="frontPage" class="page active">
-    <div class="container bw-home">
-      <div class="bw-home-statusbar">
-        <div class="bw-status-left">
-          <div class="bw-user-badge">
-            <div class="bw-user-avatar">U</div>
-            <div class="bw-user-copy">
-              <small>Current user</small>
-              <strong id="homeUserPill">User: Guest</strong>
-            </div>
-          </div>
-          <div class="bw-mini-stat">
-            <span>Mode</span>
-            <strong id="homeModeLabel">Viewer</strong>
-          </div>
-          <div class="bw-mini-stat">
-            <span>Role</span>
-            <strong id="homeRolePill">Role: Viewer</strong>
-          </div>
+  <nav id="topQuickNav" class="top-quick-nav" aria-label="Quick navigation top bar">
+    <div class="top-quick-nav-user" aria-label="Current user status">
+      <div class="bw-user-badge top-user-badge">
+        <div class="bw-user-avatar">U</div>
+        <div class="bw-user-copy">
+          <small>Current user</small>
+          <strong id="homeUserPill">User: Guest</strong>
         </div>
-        <div class="top-right">
-          <button id="loginTopBtn" class="top-auth-btn" onclick="openAuthModal('login')">Login</button>
-          <button id="signupTopBtn" class="top-auth-btn" onclick="openAuthModal('signup')">Sign Up</button>
-          <button id="adminPanelBtn" class="secondary-btn hidden" onclick="openAdminPage()">Owner Admin Panel</button>
-          <button id="logoutTopBtn" class="logout-btn hidden" onclick="logout()">Logout</button>
+      </div>
+      <div class="bw-mini-stat top-mini-stat">
+        <span>Role</span>
+        <strong id="homeRolePill">Role: Viewer</strong>
+      </div>
+    </div>
+
+    <div class="top-quick-nav-menu">
+      <div class="top-nav-item">
+        <button class="top-nav-button" type="button" onclick="openFrontPage()">Home</button>
+      </div>
+
+      <div class="top-nav-item" onmouseenter="ensureTopNavVisibilityLoaded()">
+        <button class="top-nav-button" type="button" onclick="openStatsHome()">Stats Sheets ▾</button>
+        <div class="top-nav-dropdown top-nav-dropdown-wide" aria-label="Stats Sheets quick select">
+          <div class="top-nav-dropdown-title">Stats Sheets</div>
+          <button type="button" onclick="openGlobalStatsPage()">Global Stats</button>
+          <button data-competition-button data-competition="Premier League" type="button" onclick="openCompetition('Premier League')">Premier League</button>
+          <button data-competition-button data-competition="Serie A" type="button" onclick="openCompetition('Serie A')">Serie A</button>
+          <button data-competition-button data-competition="La Liga" type="button" onclick="openCompetition('La Liga')">La Liga</button>
+          <button data-competition-button data-competition="Bundesliga" type="button" onclick="openCompetition('Bundesliga')">Bundesliga</button>
+          <button data-competition-button data-competition="Ligue 1" type="button" onclick="openCompetition('Ligue 1')">Ligue 1</button>
+          <button data-competition-button data-competition="Champions League" type="button" onclick="openCompetition('Champions League')">Champions League</button>
+          <button data-competition-button data-competition="Europa League" type="button" onclick="openCompetition('Europa League')">Europa League</button>
+          <button data-competition-button data-competition="Confederation Cup" type="button" onclick="openCompetition('Confederation Cup')">International Cup</button>
+          <button data-competition-button data-competition="FA Cup" type="button" onclick="openCompetition('FA Cup')">FA Cup</button>
+          <button data-competition-button data-competition="Coppa Italia" type="button" onclick="openCompetition('Coppa Italia')">Coppa Italia</button>
+          <button data-competition-button data-competition="DFB Pokal" type="button" onclick="openCompetition('DFB Pokal')">DFB Pokal</button>
+          <button data-competition-button data-competition="Copa del Rey" type="button" onclick="openCompetition('Copa del Rey')">Copa del Rey</button>
+          <button data-competition-button data-competition="Preseason Cup" type="button" onclick="openCompetition('Preseason Cup')">Preseason Cup</button>
+          <button data-competition-button data-competition="World Cup" type="button" onclick="openCompetition('World Cup')">World Cup</button>
+          <button data-competition-button data-competition="Euros" type="button" onclick="openCompetition('Euros')">Euros</button>
+          <button data-competition-button data-competition="Coppa America" type="button" onclick="openCompetition('Coppa America')">Coppa America</button>
         </div>
       </div>
 
+      <div class="top-nav-item" onmouseenter="ensureTopNavVisibilityLoaded()">
+        <button class="top-nav-button" type="button" onclick="openStandingsHome()">Standings &amp; Results ▾</button>
+        <div class="top-nav-dropdown top-nav-dropdown-wide" aria-label="Standings quick select">
+          <div class="top-nav-dropdown-title">Standings &amp; Results</div>
+          <button data-competition-button data-competition="Premier League" type="button" onclick="openStandingsCompetition('Premier League')">Premier League</button>
+          <button data-competition-button data-competition="Serie A" type="button" onclick="openStandingsCompetition('Serie A')">Serie A</button>
+          <button data-competition-button data-competition="La Liga" type="button" onclick="openStandingsCompetition('La Liga')">La Liga</button>
+          <button data-competition-button data-competition="Bundesliga" type="button" onclick="openStandingsCompetition('Bundesliga')">Bundesliga</button>
+          <button data-competition-button data-competition="Ligue 1" type="button" onclick="openStandingsCompetition('Ligue 1')">Ligue 1</button>
+          <button data-competition-button data-competition="Champions League" type="button" onclick="openStandingsCompetition('Champions League')">Champions League</button>
+          <button data-competition-button data-competition="Europa League" type="button" onclick="openStandingsCompetition('Europa League')">Europa League</button>
+          <button data-competition-button data-competition="Confederation Cup" type="button" onclick="openStandingsCompetition('Confederation Cup')">International Cup</button>
+          <button data-competition-button data-competition="FA Cup" type="button" onclick="openStandingsCompetition('FA Cup')">FA Cup</button>
+          <button data-competition-button data-competition="Coppa Italia" type="button" onclick="openStandingsCompetition('Coppa Italia')">Coppa Italia</button>
+          <button data-competition-button data-competition="DFB Pokal" type="button" onclick="openStandingsCompetition('DFB Pokal')">DFB Pokal</button>
+          <button data-competition-button data-competition="Copa del Rey" type="button" onclick="openStandingsCompetition('Copa del Rey')">Copa del Rey</button>
+          <button data-competition-button data-competition="Preseason Cup" type="button" onclick="openStandingsCompetition('Preseason Cup')">Preseason Cup</button>
+          <button data-competition-button data-competition="World Cup" type="button" onclick="openStandingsCompetition('World Cup')">World Cup</button>
+          <button data-competition-button data-competition="Euros" type="button" onclick="openStandingsCompetition('Euros')">Euros</button>
+          <button data-competition-button data-competition="Coppa America" type="button" onclick="openStandingsCompetition('Coppa America')">Coppa America</button>
+        </div>
+      </div>
+
+      <div class="top-nav-item" onmouseenter="ensureTopNavVisibilityLoaded()">
+        <button class="top-nav-button" type="button" onclick="openDrawHome()">Live Draws ▾</button>
+        <div class="top-nav-dropdown top-nav-dropdown-wide" aria-label="Live Draws quick select">
+          <div class="top-nav-dropdown-title">Live Draws</div>
+          <button data-competition-button data-competition="Premier League" type="button" onclick="openDrawCompetition('Premier League')">Premier League</button>
+          <button data-competition-button data-competition="Serie A" type="button" onclick="openDrawCompetition('Serie A')">Serie A</button>
+          <button data-competition-button data-competition="La Liga" type="button" onclick="openDrawCompetition('La Liga')">La Liga</button>
+          <button data-competition-button data-competition="Bundesliga" type="button" onclick="openDrawCompetition('Bundesliga')">Bundesliga</button>
+          <button data-competition-button data-competition="Ligue 1" type="button" onclick="openDrawCompetition('Ligue 1')">Ligue 1</button>
+          <button data-competition-button data-competition="Champions League" type="button" onclick="openDrawCompetition('Champions League')">Champions League</button>
+          <button data-competition-button data-competition="Europa League" type="button" onclick="openDrawCompetition('Europa League')">Europa League</button>
+          <button data-competition-button data-competition="Confederation Cup" type="button" onclick="openDrawCompetition('Confederation Cup')">International Cup</button>
+          <button data-competition-button data-competition="FA Cup" type="button" onclick="openDrawCompetition('FA Cup')">FA Cup</button>
+          <button data-competition-button data-competition="Coppa Italia" type="button" onclick="openDrawCompetition('Coppa Italia')">Coppa Italia</button>
+          <button data-competition-button data-competition="DFB Pokal" type="button" onclick="openDrawCompetition('DFB Pokal')">DFB Pokal</button>
+          <button data-competition-button data-competition="Copa del Rey" type="button" onclick="openDrawCompetition('Copa del Rey')">Copa del Rey</button>
+          <button data-competition-button data-competition="Preseason Cup" type="button" onclick="openDrawCompetition('Preseason Cup')">Preseason Cup</button>
+          <button data-competition-button data-competition="World Cup" type="button" onclick="openDrawCompetition('World Cup')">World Cup</button>
+          <button data-competition-button data-competition="Euros" type="button" onclick="openDrawCompetition('Euros')">Euros</button>
+          <button data-competition-button data-competition="Coppa America" type="button" onclick="openDrawCompetition('Coppa America')">Coppa America</button>
+        </div>
+      </div>
+
+      <div class="top-nav-item">
+        <button class="top-nav-button" type="button" onclick="openPlayerHub()">Players</button>
+      </div>
+
+    </div>
+
+    <div class="top-quick-nav-actions">
+      <button id="loginTopBtn" class="top-auth-btn" type="button" onclick="openAuthModal('login')">Login</button>
+      <button id="signupTopBtn" class="top-auth-btn" type="button" onclick="openAuthModal('signup')">Sign Up</button>
+      <button id="adminPanelBtn" class="secondary-btn hidden" type="button" onclick="openAdminPage()">Owner Admin Panel</button>
+      <button id="logoutTopBtn" class="logout-btn hidden" type="button" onclick="logout()">Logout</button>
+    </div>
+  </nav>
+
+  <section id="frontPage" class="page active">
+    <div class="container bw-home">
       <div class="bw-home-hero">
         <div class="bw-home-head">
           <div class="bw-home-kicker">Elite Football Conference Hub</div>
@@ -2219,13 +2672,56 @@
               <div class="bw-action-icon">◎</div>
               <h3>Stats Sheets</h3>
               <p>Jump straight into standings, records, summaries, and match data.</p>
-              <button type="button" onclick="openStatsHome()">Open Stats Sheets</button>
+              <div class="stats-quick-wrap" onmouseleave="scheduleCloseStatsQuickPopup(this)">
+                <button type="button" onmouseenter="openStatsQuickPopup(this.closest('.stats-quick-wrap'))" onclick="openStatsHome()">Open Stats Sheets</button>
+                <div class="stats-quick-popup" aria-label="Stats quick access" onmouseenter="openStatsQuickPopup(this.closest('.stats-quick-wrap'))" onmouseleave="scheduleCloseStatsQuickPopup(this.closest('.stats-quick-wrap'))">
+                  <div class="stats-quick-popup-title">Quick stats jump</div>
+                  <button type="button" onclick="openGlobalStatsPage()">Global Stats</button>
+                  <button data-competition-button data-competition="Premier League" type="button" onclick="openCompetition('Premier League')">Premier League</button>
+                  <button data-competition-button data-competition="Serie A" type="button" onclick="openCompetition('Serie A')">Serie A</button>
+                  <button data-competition-button data-competition="La Liga" type="button" onclick="openCompetition('La Liga')">La Liga</button>
+                  <button data-competition-button data-competition="Bundesliga" type="button" onclick="openCompetition('Bundesliga')">Bundesliga</button>
+                  <button data-competition-button data-competition="Ligue 1" type="button" onclick="openCompetition('Ligue 1')">Ligue 1</button>
+                  <button data-competition-button data-competition="Champions League" type="button" onclick="openCompetition('Champions League')">Champions League</button>
+                  <button data-competition-button data-competition="Europa League" type="button" onclick="openCompetition('Europa League')">Europa League</button>
+                  <button data-competition-button data-competition="Confederation Cup" type="button" onclick="openCompetition('Confederation Cup')">International Cup</button>
+                  <button data-competition-button data-competition="FA Cup" type="button" onclick="openCompetition('FA Cup')">FA Cup</button>
+                  <button data-competition-button data-competition="Coppa Italia" type="button" onclick="openCompetition('Coppa Italia')">Coppa Italia</button>
+                  <button data-competition-button data-competition="DFB Pokal" type="button" onclick="openCompetition('DFB Pokal')">DFB Pokal</button>
+                  <button data-competition-button data-competition="Copa del Rey" type="button" onclick="openCompetition('Copa del Rey')">Copa del Rey</button>
+                  <button data-competition-button data-competition="Preseason Cup" type="button" onclick="openCompetition('Preseason Cup')">Preseason Cup</button>
+                  <button data-competition-button data-competition="World Cup" type="button" onclick="openCompetition('World Cup')">World Cup</button>
+                  <button data-competition-button data-competition="Euros" type="button" onclick="openCompetition('Euros')">Euros</button>
+                  <button data-competition-button data-competition="Coppa America" type="button" onclick="openCompetition('Coppa America')">Coppa America</button>
+                </div>
+              </div>
             </div>
             <div class="bw-action-tile">
               <div class="bw-action-icon">◌</div>
               <h3>Live Draws</h3>
               <p>Keep your draw tools front and center with the same functionality already in your app.</p>
-              <button type="button" onclick="openDrawHome()">Open Live Draws</button>
+              <div class="stats-quick-wrap" onmouseleave="scheduleCloseStatsQuickPopup(this)">
+                <button type="button" onmouseenter="openStatsQuickPopup(this.closest('.stats-quick-wrap'))" onclick="openDrawHome()">Open Live Draws</button>
+                <div class="stats-quick-popup" aria-label="Draws quick access" onmouseenter="openStatsQuickPopup(this.closest('.stats-quick-wrap'))" onmouseleave="scheduleCloseStatsQuickPopup(this.closest('.stats-quick-wrap'))">
+                  <div class="stats-quick-popup-title">Quick draw jump</div>
+                  <button data-competition-button data-competition="Premier League" type="button" onclick="openDrawCompetition('Premier League')">Premier League</button>
+                  <button data-competition-button data-competition="Serie A" type="button" onclick="openDrawCompetition('Serie A')">Serie A</button>
+                  <button data-competition-button data-competition="La Liga" type="button" onclick="openDrawCompetition('La Liga')">La Liga</button>
+                  <button data-competition-button data-competition="Bundesliga" type="button" onclick="openDrawCompetition('Bundesliga')">Bundesliga</button>
+                  <button data-competition-button data-competition="Ligue 1" type="button" onclick="openDrawCompetition('Ligue 1')">Ligue 1</button>
+                  <button data-competition-button data-competition="Champions League" type="button" onclick="openDrawCompetition('Champions League')">Champions League</button>
+                  <button data-competition-button data-competition="Europa League" type="button" onclick="openDrawCompetition('Europa League')">Europa League</button>
+                  <button data-competition-button data-competition="Confederation Cup" type="button" onclick="openDrawCompetition('Confederation Cup')">International Cup</button>
+                  <button data-competition-button data-competition="FA Cup" type="button" onclick="openDrawCompetition('FA Cup')">FA Cup</button>
+                  <button data-competition-button data-competition="Coppa Italia" type="button" onclick="openDrawCompetition('Coppa Italia')">Coppa Italia</button>
+                  <button data-competition-button data-competition="DFB Pokal" type="button" onclick="openDrawCompetition('DFB Pokal')">DFB Pokal</button>
+                  <button data-competition-button data-competition="Copa del Rey" type="button" onclick="openDrawCompetition('Copa del Rey')">Copa del Rey</button>
+                  <button data-competition-button data-competition="Preseason Cup" type="button" onclick="openDrawCompetition('Preseason Cup')">Preseason Cup</button>
+                  <button data-competition-button data-competition="World Cup" type="button" onclick="openDrawCompetition('World Cup')">World Cup</button>
+                  <button data-competition-button data-competition="Euros" type="button" onclick="openDrawCompetition('Euros')">Euros</button>
+                  <button data-competition-button data-competition="Coppa America" type="button" onclick="openDrawCompetition('Coppa America')">Coppa America</button>
+                </div>
+              </div>
             </div>
             <div class="bw-action-tile">
               <div class="bw-action-icon">▣</div>
@@ -2249,7 +2745,28 @@
               <div class="bw-action-icon">◈</div>
               <h3>Standings &amp; Results</h3>
               <p>Go to your current standings, results tracking, and competition overview pages.</p>
-              <button type="button" onclick="openStandingsHome()">Open Standings &amp; Results</button>
+              <div class="stats-quick-wrap stats-quick-wrap-bottom-connected" onmouseleave="scheduleCloseStatsQuickPopup(this)">
+                <button type="button" onmouseenter="openStatsQuickPopup(this.closest('.stats-quick-wrap'))" onclick="openStandingsHome()">Open Standings &amp; Results</button>
+                <div class="stats-quick-popup" aria-label="Standings quick access" onmouseenter="openStatsQuickPopup(this.closest('.stats-quick-wrap'))" onmouseleave="scheduleCloseStatsQuickPopup(this.closest('.stats-quick-wrap'))">
+                  <div class="stats-quick-popup-title">Quick standings jump</div>
+                  <button data-competition-button data-competition="Premier League" type="button" onclick="openStandingsCompetition('Premier League')">Premier League</button>
+                  <button data-competition-button data-competition="Serie A" type="button" onclick="openStandingsCompetition('Serie A')">Serie A</button>
+                  <button data-competition-button data-competition="La Liga" type="button" onclick="openStandingsCompetition('La Liga')">La Liga</button>
+                  <button data-competition-button data-competition="Bundesliga" type="button" onclick="openStandingsCompetition('Bundesliga')">Bundesliga</button>
+                  <button data-competition-button data-competition="Ligue 1" type="button" onclick="openStandingsCompetition('Ligue 1')">Ligue 1</button>
+                  <button data-competition-button data-competition="Champions League" type="button" onclick="openStandingsCompetition('Champions League')">Champions League</button>
+                  <button data-competition-button data-competition="Europa League" type="button" onclick="openStandingsCompetition('Europa League')">Europa League</button>
+                  <button data-competition-button data-competition="Confederation Cup" type="button" onclick="openStandingsCompetition('Confederation Cup')">International Cup</button>
+                  <button data-competition-button data-competition="FA Cup" type="button" onclick="openStandingsCompetition('FA Cup')">FA Cup</button>
+                  <button data-competition-button data-competition="Coppa Italia" type="button" onclick="openStandingsCompetition('Coppa Italia')">Coppa Italia</button>
+                  <button data-competition-button data-competition="DFB Pokal" type="button" onclick="openStandingsCompetition('DFB Pokal')">DFB Pokal</button>
+                  <button data-competition-button data-competition="Copa del Rey" type="button" onclick="openStandingsCompetition('Copa del Rey')">Copa del Rey</button>
+                  <button data-competition-button data-competition="Preseason Cup" type="button" onclick="openStandingsCompetition('Preseason Cup')">Preseason Cup</button>
+                  <button data-competition-button data-competition="World Cup" type="button" onclick="openStandingsCompetition('World Cup')">World Cup</button>
+                  <button data-competition-button data-competition="Euros" type="button" onclick="openStandingsCompetition('Euros')">Euros</button>
+                  <button data-competition-button data-competition="Coppa America" type="button" onclick="openStandingsCompetition('Coppa America')">Coppa America</button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -2268,6 +2785,10 @@
       </div>
 
       <h1>Football Stats Sheets</h1>
+      <div class="stats-tab-row">
+        <button class="secondary-btn" type="button" onclick="openGlobalStatsPage()">Open Global Stats</button>
+      </div>
+      <div class="status ok read-only-note">Stats sheets are now read-only on the website. Stats entries are managed outside this web panel.</div>
       <h2>Select a Competition</h2>
 
       <div class="menu-buttons">
@@ -2283,10 +2804,10 @@
         <button data-competition-button data-competition="Coppa Italia" class="special-competition-btn" onclick="openCompetition('Coppa Italia')">Coppa Italia</button>
         <button data-competition-button data-competition="DFB Pokal" class="special-competition-btn" onclick="openCompetition('DFB Pokal')">DFB Pokal</button>
         <button data-competition-button data-competition="Copa del Rey" class="special-competition-btn" onclick="openCompetition('Copa del Rey')">Copa del Rey</button>
-        <button class="green-competition-btn" onclick="openCompetition('Preseason Cup')">Preseason Cup</button>
-        <button class="special-competition-btn" onclick="openCompetition('World Cup')">World Cup</button>
-        <button class="special-competition-btn" onclick="openCompetition('Euros')">Euros</button>
-        <button class="special-competition-btn" onclick="openCompetition('Coppa America')">Coppa America</button>
+        <button data-competition-button data-competition="Preseason Cup" class="green-competition-btn" onclick="openCompetition('Preseason Cup')">Preseason Cup</button>
+        <button data-competition-button data-competition="World Cup" class="special-competition-btn" onclick="openCompetition('World Cup')">World Cup</button>
+        <button data-competition-button data-competition="Euros" class="special-competition-btn" onclick="openCompetition('Euros')">Euros</button>
+        <button data-competition-button data-competition="Coppa America" class="special-competition-btn" onclick="openCompetition('Coppa America')">Coppa America</button>
       </div>
 
       <div class="search-bar">
@@ -2332,6 +2853,59 @@
     </div>
   </section>
 
+  <section id="globalStatsPage" class="page">
+    <div class="container">
+      <div class="topbar">
+        <button class="back-btn" onclick="openStatsHome()">← Back to Stats</button>
+        <div>
+          <span class="pill" id="globalStatsUserPill">User: Guest</span>
+          <span class="pill" id="globalStatsRolePill">Role: Viewer</span>
+        </div>
+      </div>
+
+      <h1>Global Stats</h1>
+      <div class="status ok read-only-note">Read-only global leaderboards across all competitions.</div>
+
+      <div class="search-bar">
+        <input type="text" id="globalPagePlayerSearch" placeholder="Search player in global leaderboards" oninput="renderGlobalTables()">
+      </div>
+
+      <div class="table-grid">
+        <div class="table-card">
+          <h3>Global Goals Summary</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Rank</th>
+                <th>Player</th>
+                <th>Goals</th>
+              </tr>
+            </thead>
+            <tbody id="globalPageGoalsBody">
+              <tr><td colspan="3" class="empty">No goal stats added yet.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="table-card">
+          <h3>Global Assists Summary</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Rank</th>
+                <th>Player</th>
+                <th>Assists</th>
+              </tr>
+            </thead>
+            <tbody id="globalPageAssistsBody">
+              <tr><td colspan="3" class="empty">No assist stats added yet.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <section id="drawHomePage" class="page">
     <div class="container">
       <div class="topbar">
@@ -2358,10 +2932,10 @@
         <button data-competition-button data-competition="Coppa Italia" class="special-competition-btn" onclick="openDrawCompetition('Coppa Italia')">Coppa Italia</button>
         <button data-competition-button data-competition="DFB Pokal" class="special-competition-btn" onclick="openDrawCompetition('DFB Pokal')">DFB Pokal</button>
         <button data-competition-button data-competition="Copa del Rey" class="special-competition-btn" onclick="openDrawCompetition('Copa del Rey')">Copa del Rey</button>
-        <button class="green-competition-btn" onclick="openDrawCompetition('Preseason Cup')">Preseason Cup</button>
-        <button class="special-competition-btn" onclick="openDrawCompetition('World Cup')">World Cup</button>
-        <button class="special-competition-btn" onclick="openDrawCompetition('Euros')">Euros</button>
-        <button class="special-competition-btn" onclick="openDrawCompetition('Coppa America')">Coppa America</button>
+        <button data-competition-button data-competition="Preseason Cup" class="green-competition-btn" onclick="openDrawCompetition('Preseason Cup')">Preseason Cup</button>
+        <button data-competition-button data-competition="World Cup" class="special-competition-btn" onclick="openDrawCompetition('World Cup')">World Cup</button>
+        <button data-competition-button data-competition="Euros" class="special-competition-btn" onclick="openDrawCompetition('Euros')">Euros</button>
+        <button data-competition-button data-competition="Coppa America" class="special-competition-btn" onclick="openDrawCompetition('Coppa America')">Coppa America</button>
       </div>
     </div>
   </section>
@@ -3127,7 +3701,7 @@
 
       <h1 id="competitionTitle">Competition</h1>
 
-      <div id="inputPanel" class="card">
+      <div id="inputPanel" class="card hidden">
         <h3>Moderator / Owner Input Panel</h3>
         <div class="form-grid">
           <div>
@@ -3166,8 +3740,8 @@
         </div>
       </div>
 
-      <div id="viewerNotice" class="status ok hidden">
-        You are in view-only mode. Log in with a moderator or owner account to edit the leaderboards.
+      <div id="viewerNotice" class="status ok">
+        This stats sheet is read-only on the website. Use the database/admin backend to manage stats entries.
       </div>
 
       <div class="search-bar">
@@ -4369,7 +4943,11 @@ const competitions = [
   "FA Cup",
   "Coppa Italia",
   "DFB Pokal",
-  "Copa del Rey"
+  "Copa del Rey",
+  "Preseason Cup",
+  "World Cup",
+  "Euros",
+  "Coppa America"
 ];
 
 const teamNationMap = {
@@ -4449,7 +5027,6 @@ function canBypassCompetitionVisibility() {
 }
 
 function isCompetitionVisibleToCurrentUser(competition) {
-  if (canBypassCompetitionVisibility()) return true;
   return competitionVisibilityCache[competition] !== false;
 }
 
@@ -4460,10 +5037,66 @@ function getCompetitionDisplayName(competition) {
 
 function applyCompetitionVisibilityToMenus() {
   document.querySelectorAll('[data-competition-button]').forEach(button => {
-    const competition = button.dataset.competition || "";
+    const competition = canonicalizeCompetitionName(button.dataset.competition || "");
     if (!competition) return;
     button.classList.toggle("hidden", !isCompetitionVisibleToCurrentUser(competition));
   });
+  refreshStatsQuickAccessVisibility();
+}
+
+function refreshStatsQuickAccessVisibility() {
+  document.querySelectorAll('.stats-quick-popup').forEach((popup, index) => {
+    popup.querySelectorAll('[data-competition-button]').forEach(button => {
+      const competition = canonicalizeCompetitionName(button.dataset.competition || "");
+      if (!competition) return;
+      button.classList.toggle("hidden", !isCompetitionVisibleToCurrentUser(competition));
+    });
+
+    const competitionButtons = Array.from(popup.querySelectorAll('[data-competition-button]'));
+    if (!competitionButtons.length) return;
+
+    const anyVisible = competitionButtons.some(button => !button.classList.contains('hidden'));
+    const emptyNoteId = `statsQuickEmptyNote${index}`;
+    let emptyNote = popup.querySelector(`#${emptyNoteId}`);
+    if (!anyVisible) {
+      if (!emptyNote) {
+        emptyNote = document.createElement('div');
+        emptyNote.id = emptyNoteId;
+        emptyNote.className = 'empty';
+        emptyNote.textContent = 'No visible competitions available.';
+        popup.appendChild(emptyNote);
+      }
+    } else if (emptyNote) {
+      emptyNote.remove();
+    }
+  });
+}
+
+function openStatsQuickPopup(wrap) {
+  if (!wrap) return;
+  clearTimeout(wrap._statsQuickCloseTimer);
+  wrap.classList.add('stats-quick-open');
+  if (!competitionVisibilityLoaded) {
+    loadCompetitionVisibilitySettings().then(() => refreshStatsQuickAccessVisibility());
+  } else {
+    refreshStatsQuickAccessVisibility();
+  }
+}
+
+function scheduleCloseStatsQuickPopup(wrap) {
+  if (!wrap) return;
+  clearTimeout(wrap._statsQuickCloseTimer);
+  wrap._statsQuickCloseTimer = setTimeout(() => {
+    wrap.classList.remove('stats-quick-open');
+  }, 260);
+}
+
+function ensureTopNavVisibilityLoaded() {
+  if (!competitionVisibilityLoaded) {
+    loadCompetitionVisibilitySettings().then(() => applyCompetitionVisibilityToMenus());
+  } else {
+    applyCompetitionVisibilityToMenus();
+  }
 }
 
 async function loadCompetitionVisibilitySettings(force = false) {
@@ -8266,6 +8899,11 @@ function normalizePlayerSpreadsheetRow(row = {}) {
       return el ? el.value.trim().toLowerCase() : "";
     }
 
+    function getGlobalPageSearchTerm() {
+      const el = document.getElementById("globalPagePlayerSearch");
+      return el ? el.value.trim().toLowerCase() : "";
+    }
+
     function canEdit() {
       return currentUser && (currentUser.role === "owner" || currentUser.role === "moderator");
     }
@@ -8293,10 +8931,20 @@ function normalizePlayerSpreadsheetRow(row = {}) {
       if (el) el.innerHTML = "";
     }
 
+    function adjustFixedTopNavOffset() {
+      const nav = document.getElementById("topQuickNav");
+      if (!nav) return;
+      const offset = Math.ceil(nav.getBoundingClientRect().height + 18);
+      document.querySelectorAll(".page").forEach(page => {
+        page.style.paddingTop = `${offset}px`;
+      });
+    }
+
     function showPage(pageId) {
       document.querySelectorAll(".page").forEach(page => page.classList.remove("active"));
       document.getElementById(pageId).classList.add("active");
       closeSidebar();
+      adjustFixedTopNavOffset();
     }
 
     function toggleSidebar() {
@@ -8583,12 +9231,18 @@ function normalizePlayerSpreadsheetRow(row = {}) {
       const role = currentUser ? currentUser.role : "Viewer";
       const mode = canEdit() ? "Editor" : "Viewer";
 
-      document.getElementById("homeModeLabel").textContent = mode;
+      const homeModeLabel = document.getElementById("homeModeLabel");
+      if (homeModeLabel) homeModeLabel.textContent = mode;
       document.getElementById("homeUserPill").textContent = `User: ${username}`;
       document.getElementById("homeRolePill").textContent = `Role: ${role}`;
 
       document.getElementById("statsHomeUserPill").textContent = `User: ${username}`;
       document.getElementById("statsHomeRolePill").textContent = `Role: ${role}`;
+
+      const globalStatsUserPill = document.getElementById("globalStatsUserPill");
+      const globalStatsRolePill = document.getElementById("globalStatsRolePill");
+      if (globalStatsUserPill) globalStatsUserPill.textContent = `User: ${username}`;
+      if (globalStatsRolePill) globalStatsRolePill.textContent = `Role: ${role}`;
 
       document.getElementById("drawHomeUserPill").textContent = `User: ${username}`;
       document.getElementById("drawHomeRolePill").textContent = `Role: ${role}`;
@@ -8607,6 +9261,12 @@ function normalizePlayerSpreadsheetRow(row = {}) {
       const sidebarLogoutBtn = document.getElementById("sidebarLogoutBtn");
       const sidebarOwnerAdminBtn = document.getElementById("sidebarOwnerAdminBtn");
       const sidebarAdminDashboardBtn = document.getElementById("sidebarAdminDashboardBtn");
+      const topNavUserPill = document.getElementById("topNavUserPill");
+      const topNavLoginBtn = document.getElementById("topNavLoginBtn");
+      const topNavSignupBtn = document.getElementById("topNavSignupBtn");
+      const topNavLogoutBtn = document.getElementById("topNavLogoutBtn");
+      const topNavOwnerAdminBtn = document.getElementById("topNavOwnerAdminBtn");
+      const topNavAdminDashboardBtn = document.getElementById("topNavAdminDashboardBtn");
 
       if (leagueStatsUserPill) leagueStatsUserPill.textContent = `User: ${username}`;
       if (leagueStatsRolePill) leagueStatsRolePill.textContent = `Role: ${role}`;
@@ -8616,6 +9276,12 @@ function normalizePlayerSpreadsheetRow(row = {}) {
       if (sidebarLogoutBtn) sidebarLogoutBtn.classList.toggle("hidden", !currentUser);
       if (sidebarOwnerAdminBtn) sidebarOwnerAdminBtn.classList.toggle("hidden", !isOwner());
       if (sidebarAdminDashboardBtn) sidebarAdminDashboardBtn.classList.toggle("hidden", !canAccessAdminDashboard());
+      if (topNavUserPill) topNavUserPill.textContent = `User: ${username}`;
+      if (topNavLoginBtn) topNavLoginBtn.classList.toggle("hidden", !!currentUser);
+      if (topNavSignupBtn) topNavSignupBtn.classList.toggle("hidden", !!currentUser);
+      if (topNavLogoutBtn) topNavLogoutBtn.classList.toggle("hidden", !currentUser);
+      if (topNavOwnerAdminBtn) topNavOwnerAdminBtn.classList.toggle("hidden", !isOwner());
+      if (topNavAdminDashboardBtn) topNavAdminDashboardBtn.classList.toggle("hidden", !canAccessAdminDashboard());
 
       const playerHomeUserPill = document.getElementById("playerHomeUserPill");
       const playerHomeRolePill = document.getElementById("playerHomeRolePill");
@@ -8735,9 +9401,11 @@ if (budgetViewerNotice) budgetViewerNotice.classList.toggle("hidden", canManageS
       unsubscribeAdminChannel();
     }
 
-    function openFrontPage() {
+    async function openFrontPage() {
       unsubscribeAllRealtimeChannels();
       refreshUserBars();
+      await loadCompetitionVisibilitySettings();
+      refreshStatsQuickAccessVisibility();
       showPage("frontPage");
     }
 
@@ -10644,6 +11312,15 @@ ${detail}`);
       subscribeStatsRealtime();
     }
 
+    async function openGlobalStatsPage() {
+      unsubscribeAllRealtimeChannels();
+      refreshUserBars();
+      await loadCompetitionVisibilitySettings();
+      await renderGlobalTables();
+      showPage("globalStatsPage");
+      subscribeStatsRealtime();
+    }
+
     async function openDrawHome() {
       unsubscribeAllRealtimeChannels();
       refreshUserBars();
@@ -11028,6 +11705,7 @@ ${detail}`);
       await logAction("login", "User logged in.");
 
       refreshUserBars();
+      adjustFixedTopNavOffset();
       updateDrawPanelsVisibility();
       closeAuthModal();
 
@@ -11217,8 +11895,8 @@ ${detail}`);
       const inputPanel = document.getElementById("inputPanel");
       const viewerNotice = document.getElementById("viewerNotice");
 
-      inputPanel.classList.toggle("hidden", !canEdit());
-      viewerNotice.classList.toggle("hidden", canEdit());
+      if (inputPanel) inputPanel.classList.add("hidden");
+      if (viewerNotice) viewerNotice.classList.remove("hidden");
 
       const searchInput = document.getElementById("competitionPlayerSearch");
       if (searchInput) searchInput.value = "";
@@ -11232,6 +11910,9 @@ ${detail}`);
     }
 
     async function addStats() {
+      alert("Stats entry is disabled on the website. This stats sheet is read-only.");
+      return;
+
       if (!canEdit()) {
         alert("You do not have permission to edit.");
         return;
@@ -11725,27 +12406,17 @@ ${detail}`);
       }
     }
 
-    async function renderGlobalTables() {
-      const { data, error } = await supabaseClient
-        .from(STATS_TABLE)
-        .select("*");
-
-      const globalGoalsBody = document.getElementById("globalGoalsBody");
-      const globalAssistsBody = document.getElementById("globalAssistsBody");
+    function renderGlobalStatsPair(goalsBodyId, assistsBodyId, rows, searchTerm) {
+      const globalGoalsBody = document.getElementById(goalsBodyId);
+      const globalAssistsBody = document.getElementById(assistsBodyId);
+      if (!globalGoalsBody || !globalAssistsBody) return;
 
       globalGoalsBody.innerHTML = "";
       globalAssistsBody.innerHTML = "";
 
-      if (error) {
-        globalGoalsBody.innerHTML = `<tr><td colspan="3" class="empty">Could not load global stats.</td></tr>`;
-        globalAssistsBody.innerHTML = `<tr><td colspan="3" class="empty">Could not load global stats.</td></tr>`;
-        return;
-      }
-
       const playerMap = {};
-      const searchTerm = getHomeSearchTerm();
 
-      (data || []).forEach(row => {
+      (rows || []).forEach(row => {
         const key = normalizeName(row.player || "");
         if (!key) return;
 
@@ -11800,6 +12471,28 @@ ${detail}`);
           `;
         });
       }
+    }
+
+    async function renderGlobalTables() {
+      const { data, error } = await supabaseClient
+        .from(STATS_TABLE)
+        .select("*");
+
+      if (error) {
+        [
+          ["globalGoalsBody", "globalAssistsBody"],
+          ["globalPageGoalsBody", "globalPageAssistsBody"]
+        ].forEach(([goalsId, assistsId]) => {
+          const goalsBody = document.getElementById(goalsId);
+          const assistsBody = document.getElementById(assistsId);
+          if (goalsBody) goalsBody.innerHTML = `<tr><td colspan="3" class="empty">Could not load global stats.</td></tr>`;
+          if (assistsBody) assistsBody.innerHTML = `<tr><td colspan="3" class="empty">Could not load global stats.</td></tr>`;
+        });
+        return;
+      }
+
+      renderGlobalStatsPair("globalGoalsBody", "globalAssistsBody", data || [], getHomeSearchTerm());
+      renderGlobalStatsPair("globalPageGoalsBody", "globalPageAssistsBody", data || [], getGlobalPageSearchTerm());
     }
 
     async function clearCompetitionStats() {
@@ -12991,9 +13684,10 @@ async function savePlayerSpreadsheetMeta(playerId) {
           },
           async () => {
             const statsHomeActive = document.getElementById("statsHomePage").classList.contains("active");
+            const globalStatsActive = document.getElementById("globalStatsPage")?.classList.contains("active");
             const competitionActive = document.getElementById("competitionPage").classList.contains("active");
 
-            if (statsHomeActive) {
+            if (statsHomeActive || globalStatsActive) {
               await renderGlobalTables();
             }
 
@@ -13007,9 +13701,10 @@ async function savePlayerSpreadsheetMeta(playerId) {
 
           if (status === "SUBSCRIBED") {
             const statsHomeActive = document.getElementById("statsHomePage").classList.contains("active");
+            const globalStatsActive = document.getElementById("globalStatsPage")?.classList.contains("active");
             const competitionActive = document.getElementById("competitionPage").classList.contains("active");
 
-            if (statsHomeActive) {
+            if (statsHomeActive || globalStatsActive) {
               await renderGlobalTables();
             }
 
@@ -13587,7 +14282,68 @@ async function applyForfeitResult() {
       }
     }
 
+
+    function setupTopNavHoverStability() {
+      document.querySelectorAll('.top-nav-item').forEach(item => {
+        const dropdown = item.querySelector('.top-nav-dropdown');
+        if (!dropdown) return;
+
+        const openDropdown = () => {
+          clearTimeout(item._topNavCloseTimer);
+          item.classList.add('top-nav-open');
+          ensureTopNavVisibilityLoaded();
+        };
+
+        const closeDropdown = () => {
+          clearTimeout(item._topNavCloseTimer);
+          item._topNavCloseTimer = setTimeout(() => {
+            item.classList.remove('top-nav-open');
+          }, 180);
+        };
+
+        item.addEventListener('mouseenter', openDropdown);
+        item.addEventListener('mouseleave', closeDropdown);
+        item.addEventListener('focusin', openDropdown);
+        item.addEventListener('focusout', event => {
+          if (!item.contains(event.relatedTarget)) closeDropdown();
+        });
+        dropdown.addEventListener('mouseenter', openDropdown);
+        dropdown.addEventListener('mouseleave', closeDropdown);
+      });
+    }
+
+    function setupAuthEnterSubmit() {
+      const loginInputs = [
+        document.getElementById("loginUsername"),
+        document.getElementById("loginPassword")
+      ].filter(Boolean);
+
+      const signupInputs = [
+        document.getElementById("signupUsername"),
+        document.getElementById("signupPassword")
+      ].filter(Boolean);
+
+      loginInputs.forEach(input => {
+        input.addEventListener("keydown", event => {
+          if (event.key !== "Enter") return;
+          event.preventDefault();
+          login();
+        });
+      });
+
+      signupInputs.forEach(input => {
+        input.addEventListener("keydown", event => {
+          if (event.key !== "Enter") return;
+          event.preventDefault();
+          signUp();
+        });
+      });
+    }
+
     async function initApp() {
+      setupAuthEnterSubmit();
+      setupTopNavHoverStability();
+      window.addEventListener("resize", adjustFixedTopNavOffset);
       applySavedTheme();
       populateMatchdays();
       await ensureDefaultUsers();
@@ -13597,7 +14353,7 @@ async function applyForfeitResult() {
       await renderGlobalTables();
       await renderPlayerSpreadsheet("playerHomeSpreadsheetBody");
       populateBudgetTeamDropdowns();
-          openFrontPage();
+          await openFrontPage();
     }
 
     initApp();
